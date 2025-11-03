@@ -67,7 +67,7 @@ export class AuthClient {
 
   async getCurrentUser(): Promise<AuthUser | null> {
     try {
-      const response = await fetch(`${API_URL}/auth/me`, {
+      const response = await fetch(`${API_URL}/auth/session`, {
         credentials: 'include',
       });
 
@@ -75,7 +75,8 @@ export class AuthClient {
         return null;
       }
 
-      return response.json();
+      const result = await response.json();
+      return result.data?.user || null;
     } catch (error) {
       return null;
     }
