@@ -1,0 +1,278 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch: # Allow manual trigger
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-e2e:
+    name: Run E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: retail_user
+          POSTGRES_PASSWORD: retail_password_dev
+          POSTGRES_DB: retail_app_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: false
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Playwright Browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Setup environment variables
+        run: |
+          cp .env.test .env
+          echo "DATABASE_URL=postgresql://retail_user:retail_password_dev@localhost:5432/retail_app_test?schema=public" >> .env
+          echo "REDIS_URL=redis://localhost:6379" >> .env
+          echo "API_URL=http://localhost:3001" >> .env
+          echo "BASE_URL=http://localhost:3000" >> .env
+          echo "BETTER_AUTH_SECRET=test-secret-key-min-32-chars-long-for-testing" >> .env
+          echo "NODE_ENV=test" >> .env
+          echo "AFIP_PRODUCTION=false" >> .env
+
+      - name: Generate Prisma Client
+        run: pnpm db:generate
+
+      - name: Run database migrations
+        run: pnpm exec prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://retail_user:retail_password_dev@localhost:5432/retail_app_test?schema=public
+
+      - name: Build applications
+        run: pnpm build
+
+      - name: Run E2E tests
+        run: pnpm test:e2e
+        env:
+          DATABASE_URL: postgresql://retail_user:retail_password_dev@localhost:5432/retail_app_test?schema=public
+          REDIS_URL: redis://localhost:6379
+          API_URL: http://localhost:3001
+          BASE_URL: http://localhost:3000
+          BETTER_AUTH_SECRET: test-secret-key-min-32-chars-long-for-testing
+          NODE_ENV: test
+          AFIP_PRODUCTION: false
+          AFIP_CUIT: 20409378472
+          MERCADO_PAGO_ACCESS_TOKEN: TEST-token
+
+      - name: Upload Playwright Report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 30
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-results
+          path: test-results/
+          retention-days: 30
+
+      - name: Upload Screenshots on Failure
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: test-screenshots
+          path: test-results/**/*screenshot*.png
+          retention-days: 7
+
+      - name: Upload Videos on Failure
+        uses: actions/upload-artifact@v3
+        if: failure()
+        with:
+          name: test-videos
+          path: test-results/**/*.webm
+          retention-days: 7
+
+      - name: Comment PR with Test Results
+        uses: daun/playwright-report-comment@v3
+        if: github.event_name == 'pull_request' && always()
+        with:
+          report-path: playwright-report
+
+  test-e2e-sharded:
+    name: E2E Tests (Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    strategy:
+      fail-fast: false
+      matrix:
+        shardIndex: [1, 2, 3, 4]
+        shardTotal: [4]
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: retail_user
+          POSTGRES_PASSWORD: retail_password_dev
+          POSTGRES_DB: retail_app_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Setup Playwright Browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Setup environment variables
+        run: |
+          cp .env.test .env
+          echo "DATABASE_URL=postgresql://retail_user:retail_password_dev@localhost:5432/retail_app_test?schema=public" >> .env
+
+      - name: Generate Prisma Client
+        run: pnpm db:generate
+
+      - name: Run database migrations
+        run: pnpm exec prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://retail_user:retail_password_dev@localhost:5432/retail_app_test?schema=public
+
+      - name: Build applications
+        run: pnpm build
+
+      - name: Run E2E tests (Sharded)
+        run: pnpm test:e2e --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
+        env:
+          DATABASE_URL: postgresql://retail_user:retail_password_dev@localhost:5432/retail_app_test?schema=public
+          REDIS_URL: redis://localhost:6379
+
+      - name: Upload Shard Report
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: playwright-report-${{ matrix.shardIndex }}
+          path: playwright-report/
+          retention-days: 7
+
+  merge-reports:
+    name: Merge Test Reports
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && always()
+    needs: [test-e2e-sharded]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download all reports
+        uses: actions/download-artifact@v3
+        with:
+          path: all-reports
+
+      - name: Merge reports
+        run: |
+          pnpm exec playwright merge-reports --reporter html ./all-reports/playwright-report-*
+
+      - name: Upload merged report
+        uses: actions/upload-artifact@v3
+        with:
+          name: playwright-merged-report
+          path: playwright-report/
+          retention-days: 30

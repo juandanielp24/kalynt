@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Comprobante de Venta</title>
+</head>
+<body style="font-family: monospace; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="border: 2px solid #333; padding: 20px;">
+    <div style="text-align: center; margin-bottom: 20px;">
+      <h2 style="margin: 0;">{{tenantName}}</h2>
+      <p style="margin: 5px 0;">CUIT: {{tenantCuit}}</p>
+      <p style="margin: 5px 0;">{{address}}</p>
+    </div>
+
+    <div style="border-top: 1px dashed #333; border-bottom: 1px dashed #333; padding: 10px 0; margin: 20px 0;">
+      <p style="margin: 5px 0;"><strong>COMPROBANTE DE VENTA</strong></p>
+      <p style="margin: 5px 0;">Nº: {{saleNumber}}</p>
+      <p style="margin: 5px 0;">Fecha: {{saleDate}}</p>
+      {{#if invoiceNumber}}
+      <p style="margin: 5px 0;">Factura {{invoiceType}}: {{invoiceNumber}}</p>
+      <p style="margin: 5px 0;">CAE: {{cae}}</p>
+      {{/if}}
+    </div>
+
+    {{#if customerName}}
+    <div style="margin: 20px 0;">
+      <p style="margin: 5px 0;"><strong>Cliente:</strong> {{customerName}}</p>
+      {{#if customerCuit}}
+      <p style="margin: 5px 0;"><strong>CUIT:</strong> {{customerCuit}}</p>
+      {{/if}}
+    </div>
+    {{/if}}
+
+    <table style="width: 100%; margin: 20px 0;">
+      <thead>
+        <tr style="border-bottom: 1px solid #333;">
+          <th style="text-align: left; padding: 5px;">Producto</th>
+          <th style="text-align: center; padding: 5px;">Cant.</th>
+          <th style="text-align: right; padding: 5px;">Precio</th>
+          <th style="text-align: right; padding: 5px;">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each items}}
+        <tr>
+          <td style="padding: 5px;">{{this.productName}}</td>
+          <td style="text-align: center; padding: 5px;">{{this.quantity}}</td>
+          <td style="text-align: right; padding: 5px;">{{this.unitPrice}}</td>
+          <td style="text-align: right; padding: 5px;">{{this.total}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+
+    <div style="border-top: 1px dashed #333; padding-top: 10px; text-align: right;">
+      <p style="margin: 5px 0;">Subtotal: {{subtotal}}</p>
+      <p style="margin: 5px 0;">IVA (21%): {{tax}}</p>
+      {{#if discount}}
+      <p style="margin: 5px 0;">Descuento: -{{discount}}</p>
+      {{/if}}
+      <p style="margin: 10px 0; font-size: 18px;"><strong>TOTAL: {{total}}</strong></p>
+    </div>
+
+    <div style="margin-top: 20px;">
+      <p style="margin: 5px 0;"><strong>Método de pago:</strong> {{paymentMethod}}</p>
+    </div>
+
+    <div style="text-align: center; margin-top: 30px; font-size: 12px;">
+      <p>¡Gracias por su compra!</p>
+      <p>{{websiteUrl}}</p>
+    </div>
+  </div>
+</body>
+</html>

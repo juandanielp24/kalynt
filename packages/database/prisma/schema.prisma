@@ -1,0 +1,311 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ========================================
+// CORE: Multi-tenancy & Users
+// ========================================
+
+model Tenant {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  slug      String   @unique // para URLs: tenant-slug.app.com
+  country   String   @default("AR") // AR, CL, CO, MX
+
+  // AFIP/Fiscal info (Argentina specific)
+  cuit      String?  @unique
+  fiscalCondition String? @map("fiscal_condition") // RI (Responsable Inscripto), Monotributo, Exento
+
+  // Settings
+  timezone  String   @default("America/Argentina/Buenos_Aires")
+  currency  String   @default("ARS")
+
+  // Subscription
+  plan      String   @default("basic") // basic, pro, enterprise
+  status    String   @default("active") // active, suspended, cancelled
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  users     User[]
+  locations Location[]
+  products  Product[]
+  sales     Sale[]
+  categories Category[]
+
+  @@map("tenants")
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+
+  email     String
+  name      String
+  role      String   // owner, admin, cashier, viewer
+
+  // Auth (better-auth integrará aquí)
+  emailVerified Boolean @default(false) @map("email_verified")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sales     Sale[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId, role])
+  @@map("users")
+}
+
+// ========================================
+// INVENTORY & PRODUCTS
+// ========================================
+
+model Location {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+
+  name      String   // "Sucursal Palermo", "Depósito Central"
+  type      String   @default("store") // store, warehouse
+
+  // Address
+  address   String?
+  city      String?
+  province  String?
+  country   String   @default("AR")
+
+  // Contact
+  phone     String?
+  email     String?
+
+  // Status
+  isActive  Boolean  @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  stock     Stock[]
+  sales     Sale[]
+
+  @@index([tenantId, isActive])
+  @@map("locations")
+}
+
+model Category {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+
+  name      String
+  slug      String
+  description String?
+
+  // Jerarquía (árbol de categorías)
+  parentId  String?  @map("parent_id") @db.Uuid
+  parent    Category? @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children  Category[] @relation("CategoryTree")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  products  Product[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, parentId])
+  @@map("categories")
+}
+
+model Product {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  categoryId String?  @map("category_id") @db.Uuid
+
+  // Identificación
+  sku       String   // Stock Keeping Unit
+  barcode   String?  // EAN-13, UPC-A
+  name      String
+  description String?
+
+  // Precios (almacenar en centavos como INT, convertir a NUMERIC en queries)
+  // Para MVP: un solo precio, después agregar price_history table
+  costCents Int      @default(0) @map("cost_cents") // costo de compra
+  priceCents Int     @default(0) @map("price_cents") // precio de venta
+
+  // Tax
+  taxRate   Decimal  @default(0.21) @map("tax_rate") @db.Decimal(5, 4) // 0.21 = 21% IVA
+
+  // Inventory tracking
+  trackStock Boolean @default(true) @map("track_stock")
+
+  // Status
+  isActive  Boolean  @default(true) @map("is_active")
+
+  // Metadata
+  imageUrl  String?  @map("image_url")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category  Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  stock     Stock[]
+  saleItems SaleItem[]
+
+  @@unique([tenantId, sku])
+  @@index([tenantId, categoryId])
+  @@index([barcode])
+  @@map("products")
+}
+
+model Stock {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  productId  String   @map("product_id") @db.Uuid
+  locationId String   @map("location_id") @db.Uuid
+
+  quantity   Int      @default(0)
+
+  // Para alertas
+  minQuantity Int     @default(0) @map("min_quantity")
+  maxQuantity Int?    @map("max_quantity")
+
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, locationId])
+  @@index([tenantId, locationId])
+  @@map("stock")
+}
+
+// ========================================
+// SALES (POS)
+// ========================================
+
+model Sale {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @map("tenant_id") @db.Uuid
+  locationId String   @map("location_id") @db.Uuid
+  userId     String   @map("user_id") @db.Uuid // cajero que hizo la venta
+
+  // Sale info
+  saleNumber String   @map("sale_number") // número secuencial por tenant
+  saleDate   DateTime @default(now()) @map("sale_date")
+
+  // Amounts (en centavos)
+  subtotalCents Int    @map("subtotal_cents")
+  taxCents      Int    @map("tax_cents") // IVA
+  discountCents Int    @default(0) @map("discount_cents")
+  totalCents    Int    @map("total_cents")
+
+  // Payment
+  paymentMethod String @map("payment_method") // cash, debit_card, credit_card, mercado_pago, modo, transfer
+  paymentStatus String @default("pending") @map("payment_status") // pending, completed, failed, refunded
+
+  // AFIP Invoice
+  invoiceType   String? @map("invoice_type") // A, B, C, E
+  invoiceNumber String? @map("invoice_number") // 00001-00012345
+  cae           String? // Código Autorización Electrónico AFIP
+  caeExpiration DateTime? @map("cae_expiration")
+
+  // Customer (opcional para B2C)
+  customerName  String? @map("customer_name")
+  customerCuit  String? @map("customer_cuit")
+  customerEmail String? @map("customer_email")
+
+  // Status
+  status        String  @default("completed") // draft, completed, cancelled, refunded
+
+  // Notes
+  notes         String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  location  Location   @relation(fields: [locationId], references: [id])
+  user      User       @relation(fields: [userId], references: [id])
+  items     SaleItem[]
+
+  @@unique([tenantId, saleNumber])
+  @@index([tenantId, saleDate])
+  @@index([tenantId, status])
+  @@index([paymentStatus])
+  @@map("sales")
+}
+
+model SaleItem {
+  id        String   @id @default(uuid()) @db.Uuid
+  saleId    String   @map("sale_id") @db.Uuid
+  productId String   @map("product_id") @db.Uuid
+
+  // Item details (snapshot at time of sale)
+  productName  String  @map("product_name")
+  productSku   String  @map("product_sku")
+
+  quantity     Int
+  unitPriceCents Int   @map("unit_price_cents")
+  taxRate      Decimal @map("tax_rate") @db.Decimal(5, 4)
+  discountCents Int    @default(0) @map("discount_cents")
+
+  // Calculated
+  subtotalCents Int    @map("subtotal_cents") // quantity * unitPrice - discount
+  taxCents      Int    @map("tax_cents")
+  totalCents    Int    @map("total_cents")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  sale      Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@index([saleId])
+  @@map("sale_items")
+}
+
+// ========================================
+// AUDIT LOG (para compliance)
+// ========================================
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @map("tenant_id") @db.Uuid
+  userId    String?  @map("user_id") @db.Uuid
+
+  action    String   // create, update, delete
+  entity    String   // sale, product, user, etc.
+  entityId  String   @map("entity_id") @db.Uuid
+
+  // Snapshot
+  changes   Json?    // { before: {...}, after: {...} }
+
+  // Metadata
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tenantId, entity, entityId])
+  @@index([tenantId, createdAt])
+  @@map("audit_logs")
+}

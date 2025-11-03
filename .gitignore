@@ -1,0 +1,83 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Production
+dist/
+build/
+.next/
+out/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Mobile
+.expo/
+.expo-shared/
+*.jks
+*.p12
+*.mobileprovision
+
+# Database
+*.db
+*.sqlite
+pgdata/
+
+# Temporary
+.tmp/
+.cache/
+
+# Environment files
+.env.local
+.env.*.local
+.env
+.env.production
+
+# Docker
+docker-compose.override.yml
+
+# Logs
+logs/
+*.log
+
+# Database
+*.db
+*.sqlite
+pgdata/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+.nyc_output/
+
+# Certificates (CRÍTICO - nunca commitear)
+apps/ar/certs/*.pem
+apps/ar/certs/*.key
+apps/ar/certs/*.crt
+apps/ar/certs/*.p12

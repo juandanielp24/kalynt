@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bienvenido a Retail App</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background-color: #3b82f6; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+    <h1 style="margin: 0;">¡Bienvenido a Retail App!</h1>
+  </div>
+
+  <div style="background-color: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px;">
+    <p>Hola {{name}},</p>
+
+    <p>¡Nos alegra que te hayas unido a Retail App! Tu cuenta ha sido creada exitosamente.</p>
+
+    <p><strong>Detalles de tu cuenta:</strong></p>
+    <ul>
+      <li>Email: {{email}}</li>
+      <li>Comercio: {{tenantName}}</li>
+      <li>Plan: {{plan}}</li>
+    </ul>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="{{appUrl}}/dashboard" style="background-color: #3b82f6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block;">
+        Ir al Dashboard
+      </a>
+    </div>
+
+    <p><strong>Próximos pasos:</strong></p>
+    <ol>
+      <li>Completa tu perfil y configura tu sucursal</li>
+      <li>Agrega tus primeros productos</li>
+      <li>Realiza tu primera venta</li>
+    </ol>
+
+    <p>Si tienes alguna pregunta, no dudes en contactarnos.</p>
+
+    <p>Saludos,<br>El equipo de Retail App</p>
+  </div>
+
+  <div style="text-align: center; color: #6b7280; font-size: 12px; margin-top: 20px;">
+    <p>&copy; 2025 Retail App. Todos los derechos reservados.</p>
+  </div>
+</body>
+</html>

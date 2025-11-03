@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Alerta de Stock Bajo</title>
+</head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 20px; margin-bottom: 20px;">
+    <h2 style="margin: 0 0 10px 0; color: #92400e;">⚠️ Stock Bajo</h2>
+    <p style="margin: 0; color: #92400e;">El siguiente producto tiene stock bajo y requiere reposición.</p>
+  </div>
+
+  <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px;">
+    <h3 style="margin: 0 0 15px 0;">{{productName}}</h3>
+
+    <table style="width: 100%; border-collapse: collapse;">
+      <tr>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;"><strong>SKU:</strong></td>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">{{sku}}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;"><strong>Stock actual:</strong></td>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right; color: #dc2626; font-weight: bold;">{{currentStock}} unidades</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb;"><strong>Stock mínimo:</strong></td>
+        <td style="padding: 8px 0; border-bottom: 1px solid #e5e7eb; text-align: right;">{{minStock}} unidades</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0;"><strong>Ubicación:</strong></td>
+        <td style="padding: 8px 0; text-align: right;">{{locationName}}</td>
+      </tr>
+    </table>
+
+    <div style="text-align: center; margin-top: 30px;">
+      <a href="{{appUrl}}/inventory/{{productId}}" style="background-color: #3b82f6; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block;">
+        Gestionar Producto
+      </a>
+    </div>
+  </div>
+
+  <div style="margin-top: 20px; padding: 15px; background-color: #eff6ff; border-radius: 8px;">
+    <p style="margin: 0; font-size: 14px; color: #1e40af;">
+      <strong>💡 Tip:</strong> Configura órdenes de compra automáticas para evitar quedarte sin stock.
+    </p>
+  </div>
+</body>
+</html>
