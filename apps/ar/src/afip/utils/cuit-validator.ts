@@ -1,135 +1,144 @@
 /**
  * Validador de CUIT/CUIL argentino
- *
- * El CUIT/CUIL tiene 11 dígitos: XX-XXXXXXXX-X
- * Los primeros 2 dígitos indican el tipo (20, 23, 24, 27, 30, 33, 34)
- * Los siguientes 8 son el número de documento
- * El último es el dígito verificador calculado
+ * 
+ * Formato: XX-XXXXXXXX-X
+ * - 2 dígitos de tipo de persona
+ * - 8 dígitos de DNI
+ * - 1 dígito verificador
  */
 
-/**
- * Valida el formato y dígito verificador de un CUIT/CUIL
- */
-export function validateCUIT(cuit: string): boolean {
-  // Limpiar formato (quitar guiones y espacios)
-  const cleaned = cuit.replace(/[-\s]/g, '');
+export class CuitValidator {
+  /**
+   * Valida un CUIT/CUIL
+   */
+  static validate(cuit: string): boolean {
+    if (!cuit) return false;
 
-  // Validar longitud
-  if (!/^\d{11}$/.test(cleaned)) {
-    return false;
+    // Eliminar guiones y espacios
+    const cleanCuit = cuit.replace(/[-\s]/g, '');
+
+    // Debe tener 11 dígitos
+    if (cleanCuit.length !== 11) return false;
+
+    // Debe ser numérico
+    if (!/^\d{11}$/.test(cleanCuit)) return false;
+
+    // Calcular dígito verificador
+    const calculatedDigit = this.calculateVerificationDigit(cleanCuit.substring(0, 10));
+    const providedDigit = parseInt(cleanCuit[10]);
+
+    return calculatedDigit === providedDigit;
   }
 
-  // Calcular dígito verificador
-  const digits = cleaned.split('').map(Number);
-  const checkDigit = digits[10];
-  const documentDigits = digits.slice(0, 10);
+  /**
+   * Calcula el dígito verificador
+   */
+  static calculateVerificationDigit(cuitWithoutDigit: string): number {
+    const multipliers = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
+    
+    let sum = 0;
+    for (let i = 0; i < 10; i++) {
+      sum += parseInt(cuitWithoutDigit[i]) * multipliers[i];
+    }
 
-  // Multiplicadores según AFIP
-  const multipliers = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
+    const remainder = sum % 11;
+    const digit = 11 - remainder;
 
-  // Suma ponderada
-  const sum = documentDigits.reduce(
-    (acc, digit, index) => acc + digit * multipliers[index],
-    0
-  );
-
-  // Calcular verificador
-  const remainder = sum % 11;
-  const calculatedCheck = remainder === 0 ? 0 : remainder === 1 ? 9 : 11 - remainder;
-
-  return checkDigit === calculatedCheck;
-}
-
-/**
- * Formatea un CUIT con guiones: XX-XXXXXXXX-X
- */
-export function formatCUIT(cuit: string): string {
-  const cleaned = cuit.replace(/[-\s]/g, '');
-
-  if (!/^\d{11}$/.test(cleaned)) {
-    return cuit; // Retornar sin cambios si no es válido
+    // Si el dígito es 11, devolver 0
+    // Si el dígito es 10, técnicamente es inválido, pero se usa 9
+    if (digit === 11) return 0;
+    if (digit === 10) return 9;
+    
+    return digit;
   }
 
-  return `${cleaned.slice(0, 2)}-${cleaned.slice(2, 10)}-${cleaned.slice(10)}`;
-}
+  /**
+   * Formatea un CUIT con guiones
+   */
+  static format(cuit: string): string {
+    const cleanCuit = cuit.replace(/[-\s]/g, '');
+    
+    if (cleanCuit.length !== 11) {
+      throw new Error('CUIT debe tener 11 dígitos');
+    }
 
-/**
- * Limpia el formato de un CUIT (quita guiones)
- */
-export function cleanCUIT(cuit: string): string {
-  return cuit.replace(/[-\s]/g, '');
-}
-
-/**
- * Valida si un CUIT es de persona física o jurídica
- */
-export function getCUITType(cuit: string): 'PERSONA_FISICA' | 'PERSONA_JURIDICA' | 'UNKNOWN' {
-  const cleaned = cleanCUIT(cuit);
-  const prefix = cleaned.slice(0, 2);
-
-  // Prefijos para personas físicas
-  const personaFisica = ['20', '23', '24', '27'];
-
-  // Prefijos para personas jurídicas
-  const personaJuridica = ['30', '33', '34'];
-
-  if (personaFisica.includes(prefix)) {
-    return 'PERSONA_FISICA';
+    return `${cleanCuit.substring(0, 2)}-${cleanCuit.substring(2, 10)}-${cleanCuit.substring(10)}`;
   }
 
-  if (personaJuridica.includes(prefix)) {
-    return 'PERSONA_JURIDICA';
+  /**
+   * Limpia un CUIT (quita guiones y espacios)
+   */
+  static clean(cuit: string): string {
+    return cuit.replace(/[-\s]/g, '');
   }
 
-  return 'UNKNOWN';
-}
+  /**
+   * Genera un CUIT completo a partir de un DNI
+   */
+  static generateFromDNI(dni: string, gender: 'M' | 'F' | 'C' = 'M'): string {
+    const cleanDni = dni.replace(/\D/g, '').padStart(8, '0');
+    
+    // Prefijos según género
+    // 20: Hombre, 23/24: Masculino, 27: Mujer, 30/33/34: Femenino
+    let prefix: string;
+    switch (gender) {
+      case 'M':
+        prefix = '20';
+        break;
+      case 'F':
+        prefix = '27';
+        break;
+      case 'C': // Empresa
+        prefix = '30';
+        break;
+      default:
+        prefix = '20';
+    }
 
-/**
- * Extrae el DNI de un CUIT de persona física
- */
-export function extractDNIFromCUIT(cuit: string): string | null {
-  const cleaned = cleanCUIT(cuit);
-  const type = getCUITType(cuit);
+    const cuitWithoutDigit = prefix + cleanDni;
+    const digit = this.calculateVerificationDigit(cuitWithoutDigit);
 
-  if (type !== 'PERSONA_FISICA') {
-    return null;
+    return cuitWithoutDigit + digit;
   }
 
-  // Los 8 dígitos centrales son el DNI
-  return cleaned.slice(2, 10);
-}
-
-/**
- * Genera un CUIT a partir de un DNI y tipo de persona
- */
-export function generateCUITFromDNI(
-  dni: string,
-  gender: 'M' | 'F' | 'EMPRESA' = 'M'
-): string {
-  const cleanedDNI = dni.replace(/\D/g, '').padStart(8, '0');
-
-  // Determinar prefijo según género
-  let prefix: string;
-  if (gender === 'M') {
-    prefix = '20';
-  } else if (gender === 'F') {
-    prefix = '27';
-  } else {
-    prefix = '30'; // Empresa
+  /**
+   * Extrae el DNI de un CUIT
+   */
+  static extractDNI(cuit: string): string {
+    const cleanCuit = this.clean(cuit);
+    return cleanCuit.substring(2, 10);
   }
 
-  // Calcular dígito verificador
-  const partial = prefix + cleanedDNI;
-  const digits = partial.split('').map(Number);
-  const multipliers = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
+  /**
+   * Determina el tipo de persona según el prefijo
+   */
+  static getPersonType(cuit: string): 'FISICA' | 'JURIDICA' | 'DESCONOCIDO' {
+    const cleanCuit = this.clean(cuit);
+    const prefix = parseInt(cleanCuit.substring(0, 2));
 
-  const sum = digits.reduce(
-    (acc, digit, index) => acc + digit * multipliers[index],
-    0
-  );
+    // 20, 23, 24, 27 = Persona física
+    if ([20, 23, 24, 27].includes(prefix)) {
+      return 'FISICA';
+    }
 
-  const remainder = sum % 11;
-  const checkDigit = remainder === 0 ? 0 : remainder === 1 ? 9 : 11 - remainder;
+    // 30, 33, 34 = Persona jurídica
+    if ([30, 33, 34].includes(prefix)) {
+      return 'JURIDICA';
+    }
 
-  return `${prefix}${cleanedDNI}${checkDigit}`;
+    return 'DESCONOCIDO';
+  }
+
+  /**
+   * Genera un CUIT aleatorio válido (solo para testing)
+   */
+  static generateTestCUIT(): string {
+    const prefix = '20'; // Persona física - hombre
+    const dni = String(Math.floor(Math.random() * 90000000) + 10000000); // 8 dígitos
+
+    const partial = prefix + dni;
+    const digit = this.calculateVerificationDigit(partial);
+
+    return `${prefix}-${dni}-${digit}`;
+  }
 }

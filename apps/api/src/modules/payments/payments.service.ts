@@ -1,253 +1,454 @@
-import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, Inject, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaClient } from '@retail/database';
-import { MercadoPagoProvider } from './providers/mercadopago.provider';
-import { CreatePaymentDto } from './dto/create-payment.dto';
-import { PaymentStatus } from './providers/payment-provider.interface';
+import { MercadoPagoService } from './providers/mercadopago/mercadopago.service';
+import { PaymentMethod, PaymentStatus, PaymentRequest, PaymentResponse } from './payments.types';
+import { CreatePaymentDto, ProcessMercadoPagoPaymentDto } from './dto';
 
 @Injectable()
 export class PaymentsService {
+  private readonly logger = new Logger(PaymentsService.name);
+
   constructor(
     @Inject('PRISMA') private prisma: PrismaClient,
-    private mercadoPagoProvider: MercadoPagoProvider
+    private mercadoPagoService: MercadoPagoService
   ) {}
 
-  async createPayment(tenantId: string, dto: CreatePaymentDto) {
-    // Validar que la venta existe
-    const sale = await this.prisma.sale.findFirst({
-      where: {
-        id: dto.saleId,
-        tenantId,
-      },
-      include: {
-        customer: true,
-      },
-    });
+  /**
+   * Crea un registro de pago
+   */
+  async createPayment(
+    tenantId: string,
+    dto: CreatePaymentDto
+  ): Promise<PaymentResponse> {
+    try {
+      // 1. Validar que la venta existe
+      const sale = await this.prisma.sale.findUnique({
+        where: { id: dto.saleId },
+        include: { items: true },
+      });
 
-    if (!sale) {
-      throw new NotFoundException('Sale not found');
-    }
-
-    // Verificar que no esté ya pagada completamente
-    if (sale.status === 'COMPLETED') {
-      throw new BadRequestException('Sale already paid');
-    }
-
-    // Crear pago con Mercado Pago
-    const paymentResult = await this.mercadoPagoProvider.createPayment({
-      amountCents: sale.totalCents,
-      currency: 'ARS',
-      description: `Venta #${sale.saleNumber}`,
-      metadata: {
-        saleId: sale.id,
-        tenantId,
-        paymentMethodId: dto.paymentMethodId || 'pix',
-        email: dto.email || sale.customer?.email || 'customer@example.com',
-        ...dto.metadata,
-      },
-    });
-
-    // Actualizar venta con información del pago
-    const saleNotes = typeof sale.notes === 'string' ? JSON.parse(sale.notes || '{}') : sale.notes || {};
-
-    const updatedSale = await this.prisma.sale.update({
-      where: { id: sale.id },
-      data: {
-        status: paymentResult.status === PaymentStatus.APPROVED ? 'COMPLETED' : 'PENDING',
-        paymentMethod: 'MERCADO_PAGO',
-        notes: {
-          ...saleNotes,
-          mercadoPagoPaymentId: paymentResult.id,
-          paymentExternalId: paymentResult.externalId,
-          paymentMetadata: paymentResult.metadata,
-          paymentCreatedAt: new Date().toISOString(),
-        },
-      },
-    });
-
-    return {
-      sale: updatedSale,
-      payment: paymentResult,
-    };
-  }
-
-  async getPayment(tenantId: string, paymentId: string) {
-    return this.mercadoPagoProvider.getPayment(paymentId);
-  }
-
-  async getPaymentBySale(tenantId: string, saleId: string) {
-    const sale = await this.prisma.sale.findFirst({
-      where: { id: saleId, tenantId },
-    });
-
-    if (!sale) {
-      throw new NotFoundException('Sale not found');
-    }
-
-    // Extraer payment ID de metadata
-    const saleNotes = typeof sale.notes === 'string' ? JSON.parse(sale.notes || '{}') : sale.notes || {};
-    const paymentId = saleNotes?.mercadoPagoPaymentId;
-
-    if (!paymentId) {
-      throw new NotFoundException('Payment ID not found for this sale');
-    }
-
-    return this.mercadoPagoProvider.getPayment(paymentId);
-  }
-
-  async refundPayment(tenantId: string, saleId: string, amountCents?: number) {
-    const sale = await this.prisma.sale.findFirst({
-      where: { id: saleId, tenantId },
-      include: {
-        items: {
-          include: {
-            product: true,
-          },
-        },
-      },
-    });
-
-    if (!sale) {
-      throw new NotFoundException('Sale not found');
-    }
-
-    if (sale.status === 'REFUNDED') {
-      throw new BadRequestException('Sale already refunded');
-    }
-
-    // Extraer payment ID de metadata
-    const saleNotes = typeof sale.notes === 'string' ? JSON.parse(sale.notes || '{}') : sale.notes || {};
-    const paymentId = saleNotes?.mercadoPagoPaymentId;
-
-    if (!paymentId) {
-      throw new NotFoundException('Payment ID not found');
-    }
-
-    // Procesar reembolso con Mercado Pago
-    const refundResult = await this.mercadoPagoProvider.refundPayment(
-      paymentId,
-      amountCents
-    );
-
-    // Actualizar venta
-    await this.prisma.sale.update({
-      where: { id: saleId },
-      data: {
-        status: 'REFUNDED',
-        notes: {
-          ...saleNotes,
-          refundId: refundResult.id,
-          refundedAt: new Date().toISOString(),
-          refundAmount: amountCents || sale.totalCents,
-        },
-      },
-    });
-
-    // TODO: Restaurar stock si es reembolso completo
-    if (!amountCents || amountCents === sale.totalCents) {
-      // Reembolso completo - restaurar todo el stock
-      for (const item of sale.items) {
-        await this.prisma.stock.updateMany({
-          where: {
-            productId: item.productId,
-            tenantId,
-          },
-          data: {
-            quantity: {
-              increment: item.quantity,
-            },
-          },
-        });
+      if (!sale) {
+        throw new NotFoundException('Sale not found');
       }
+
+      if (sale.tenantId !== tenantId) {
+        throw new BadRequestException('Sale does not belong to this tenant');
+      }
+
+      // 2. Crear registro de pago
+      const payment = await this.prisma.payment.create({
+        data: {
+          tenantId,
+          saleId: dto.saleId,
+          method: dto.method,
+          amountCents: dto.amountCents,
+          status: PaymentStatus.PENDING,
+          metadata: dto.metadata,
+        },
+      });
+
+      // 3. Procesar según método de pago
+      let result: PaymentResponse;
+
+      switch (dto.method) {
+        case PaymentMethod.CASH:
+          result = await this.processCashPayment(payment.id, dto);
+          break;
+
+        case PaymentMethod.MERCADO_PAGO:
+        case PaymentMethod.CREDIT_CARD:
+        case PaymentMethod.DEBIT_CARD:
+          result = await this.processMercadoPagoPayment(payment.id, dto);
+          break;
+
+        case PaymentMethod.QR_CODE:
+          result = await this.generateQRPayment(payment.id, dto);
+          break;
+
+        default:
+          throw new BadRequestException(`Payment method ${dto.method} not supported`);
+      }
+
+      return result;
+    } catch (error) {
+      this.logger.error('Error creating payment', error);
+      throw error;
     }
+  }
+
+  /**
+   * Procesa pago en efectivo (aprobación inmediata)
+   */
+  private async processCashPayment(
+    paymentId: string,
+    dto: CreatePaymentDto
+  ): Promise<PaymentResponse> {
+    // Efectivo se aprueba inmediatamente
+    await this.prisma.payment.update({
+      where: { id: paymentId },
+      data: {
+        status: PaymentStatus.APPROVED,
+        approvedAt: new Date(),
+      },
+    });
+
+    // Actualizar estado de venta
+    await this.prisma.sale.update({
+      where: { id: dto.saleId },
+      data: {
+        status: 'completed',
+        paymentMethod: PaymentMethod.CASH,
+      },
+    });
 
     return {
       success: true,
-      refund: refundResult,
-      sale: sale,
+      paymentId,
+      status: PaymentStatus.APPROVED,
     };
   }
 
   /**
-   * Webhook handler para notificaciones de Mercado Pago
+   * Procesa pago con Mercado Pago
    */
-  async handleWebhook(body: any) {
-    const { type, data } = body;
+  private async processMercadoPagoPayment(
+    paymentId: string,
+    dto: CreatePaymentDto
+  ): Promise<PaymentResponse> {
+    try {
+      // Obtener datos de la venta
+      const sale = await this.prisma.sale.findUnique({
+        where: { id: dto.saleId },
+      });
 
-    if (type === 'payment') {
-      const paymentId = data.id;
+      // Preparar request para MP
+      const mpPaymentData = {
+        transaction_amount: dto.amountCents / 100,
+        description: dto.description || `Pago venta #${sale?.saleNumber}`,
+        payment_method_id: 'account_money', // Por defecto, se puede cambiar
+        payer: {
+          email: dto.customerEmail || 'customer@example.com',
+        },
+        external_reference: dto.saleId,
+        notification_url: process.env.MERCADO_PAGO_WEBHOOK_URL,
+        metadata: {
+          ...dto.metadata,
+          payment_id: paymentId,
+          tenant_id: sale?.tenantId,
+        },
+      };
 
-      try {
-        const payment = await this.mercadoPagoProvider.getPayment(paymentId);
+      // Crear pago en MP
+      const mpPayment = await this.mercadoPagoService.createPayment(mpPaymentData);
 
-        // Buscar venta asociada por external_reference o metadata
-        const sales = await this.prisma.sale.findMany({
-          where: {
-            notes: {
-              path: ['mercadoPagoPaymentId'],
-              equals: paymentId,
-            },
+      // Actualizar registro local
+      await this.prisma.payment.update({
+        where: { id: paymentId },
+        data: {
+          externalId: String(mpPayment.id),
+          status: this.mercadoPagoService.mapMercadoPagoStatus(mpPayment.status),
+          externalData: mpPayment as any,
+        },
+      });
+
+      // Si el pago fue aprobado, actualizar venta
+      if (mpPayment.status === 'approved') {
+        await this.updateSalePaymentStatus(dto.saleId, PaymentStatus.APPROVED);
+      }
+
+      return {
+        success: mpPayment.status === 'approved',
+        paymentId,
+        status: this.mercadoPagoService.mapMercadoPagoStatus(mpPayment.status),
+        externalId: String(mpPayment.id),
+      };
+    } catch (error) {
+      this.logger.error('Error processing Mercado Pago payment', error);
+
+      // Actualizar pago como rechazado
+      await this.prisma.payment.update({
+        where: { id: paymentId },
+        data: {
+          status: PaymentStatus.REJECTED,
+          error: error.message,
+        },
+      });
+
+      throw error;
+    }
+  }
+
+  /**
+   * Genera un QR code para pago
+   */
+  private async generateQRPayment(
+    paymentId: string,
+    dto: CreatePaymentDto
+  ): Promise<PaymentResponse> {
+    try {
+      const sale = await this.prisma.sale.findUnique({
+        where: { id: dto.saleId },
+        include: { items: true },
+      });
+
+      if (!sale) {
+        throw new NotFoundException('Sale not found');
+      }
+
+      const qrData = {
+        external_reference: dto.saleId,
+        title: `Venta #${sale.saleNumber}`,
+        description: dto.description || 'Pago de venta',
+        total_amount: dto.amountCents / 100,
+        items: sale.items.map(item => ({
+          sku_number: String(item.productId),
+          category: 'marketplace',
+          title: item.productName || 'Producto',
+          description: item.productName || 'Producto',
+          unit_price: item.unitPriceCents / 100,
+          quantity: item.quantity,
+          unit_measure: 'unit',
+          total_amount: item.totalCents / 100,
+        })),
+        notification_url: process.env.MERCADO_PAGO_WEBHOOK_URL!,
+      };
+
+      const qrResult = await this.mercadoPagoService.createQRPayment(qrData);
+
+      // Actualizar pago con QR
+      await this.prisma.payment.update({
+        where: { id: paymentId },
+        data: {
+          externalId: qrResult.inStoreOrderId,
+          qrCode: qrResult.qrCode,
+          status: PaymentStatus.PENDING,
+        },
+      });
+
+      return {
+        success: true,
+        paymentId,
+        status: PaymentStatus.PENDING,
+        qrCode: qrResult.qrCode,
+      };
+    } catch (error) {
+      this.logger.error('Error generating QR payment', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Genera un link de pago
+   */
+  async generatePaymentLink(
+    tenantId: string,
+    saleId: string
+  ): Promise<{ paymentUrl: string; preferenceId: string }> {
+    try {
+      const sale = await this.prisma.sale.findUnique({
+        where: { id: saleId },
+      });
+
+      if (!sale || sale.tenantId !== tenantId) {
+        throw new NotFoundException('Sale not found');
+      }
+
+      const linkResult = await this.mercadoPagoService.createPaymentLink(
+        `Venta #${sale.saleNumber}`,
+        `Pago de compra`,
+        sale.totalCents,
+        saleId,
+        process.env.MERCADO_PAGO_WEBHOOK_URL
+      );
+
+      // Crear registro de pago
+      await this.prisma.payment.create({
+        data: {
+          tenantId,
+          saleId,
+          method: PaymentMethod.MERCADO_PAGO,
+          amountCents: sale.totalCents,
+          status: PaymentStatus.PENDING,
+          externalId: linkResult.id,
+        },
+      });
+
+      return {
+        paymentUrl: linkResult.initPoint,
+        preferenceId: linkResult.id,
+      };
+    } catch (error) {
+      this.logger.error('Error generating payment link', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Procesa notificación de webhook de Mercado Pago
+   */
+  async processWebhookNotification(
+    notificationId: string,
+    type: string
+  ): Promise<void> {
+    try {
+      this.logger.log(`Processing webhook notification: ${notificationId}, type: ${type}`);
+
+      if (type !== 'payment') {
+        this.logger.debug(`Ignoring webhook type: ${type}`);
+        return;
+      }
+
+      // Obtener información del pago desde MP
+      const mpPayment = await this.mercadoPagoService.getPaymentInfo(notificationId);
+
+      // Buscar pago local por external_reference (saleId)
+      const sale = await this.prisma.sale.findUnique({
+        where: { id: mpPayment.external_reference },
+      });
+
+      if (!sale) {
+        this.logger.warn(`Sale not found for external_reference: ${mpPayment.external_reference}`);
+        return;
+      }
+
+      // Buscar o crear registro de pago
+      let payment = await this.prisma.payment.findFirst({
+        where: {
+          saleId: sale.id,
+          externalId: String(mpPayment.id),
+        },
+      });
+
+      const newStatus = this.mercadoPagoService.mapMercadoPagoStatus(mpPayment.status);
+
+      if (payment) {
+        // Actualizar pago existente
+        await this.prisma.payment.update({
+          where: { id: payment.id },
+          data: {
+            status: newStatus,
+            externalData: mpPayment as any,
+            ...(mpPayment.status === 'approved' && { approvedAt: new Date() }),
           },
         });
+      } else {
+        // Crear nuevo registro de pago
+        payment = await this.prisma.payment.create({
+          data: {
+            tenantId: sale.tenantId,
+            saleId: sale.id,
+            method: PaymentMethod.MERCADO_PAGO,
+            amountCents: Math.round(mpPayment.transaction_amount * 100),
+            status: newStatus,
+            externalId: String(mpPayment.id),
+            externalData: mpPayment as any,
+            ...(mpPayment.status === 'approved' && { approvedAt: new Date() }),
+          },
+        });
+      }
 
-        if (sales.length > 0) {
-          const sale = sales[0];
+      // Actualizar venta si el pago fue aprobado
+      if (mpPayment.status === 'approved') {
+        await this.updateSalePaymentStatus(sale.id, PaymentStatus.APPROVED);
+      } else if (mpPayment.status === 'rejected' || mpPayment.status === 'cancelled') {
+        await this.updateSalePaymentStatus(sale.id, PaymentStatus.REJECTED);
+      }
 
-          // Actualizar estado según webhook
-          if (payment.status === PaymentStatus.APPROVED) {
-            await this.prisma.sale.update({
-              where: { id: sale.id },
-              data: {
-                status: 'COMPLETED',
-                notes: {
-                  ...(typeof sale.notes === 'string' ? JSON.parse(sale.notes) : sale.notes),
-                  paymentApprovedAt: new Date().toISOString(),
-                  webhookReceived: true,
-                },
-              },
-            });
+      this.logger.log(`Webhook processed successfully for payment ${payment.id}`);
+    } catch (error) {
+      this.logger.error('Error processing webhook', error);
+      // No relanzar el error para que MP no reintente
+    }
+  }
 
-            // TODO: Generar factura AFIP si está configurado
-          } else if (payment.status === PaymentStatus.REJECTED) {
-            await this.prisma.sale.update({
-              where: { id: sale.id },
-              data: {
-                status: 'CANCELLED',
-                notes: {
-                  ...(typeof sale.notes === 'string' ? JSON.parse(sale.notes) : sale.notes),
-                  paymentRejectedAt: new Date().toISOString(),
-                  webhookReceived: true,
-                },
-              },
-            });
-          }
+  /**
+   * Actualiza el estado de pago de una venta
+   */
+  private async updateSalePaymentStatus(
+    saleId: string,
+    status: PaymentStatus
+  ): Promise<void> {
+    const saleStatus = status === PaymentStatus.APPROVED ? 'completed' : 'pending';
+
+    await this.prisma.sale.update({
+      where: { id: saleId },
+      data: {
+        status: saleStatus,
+        paymentMethod: PaymentMethod.MERCADO_PAGO,
+      },
+    });
+  }
+
+  /**
+   * Obtiene el estado de un pago
+   */
+  async getPaymentStatus(tenantId: string, paymentId: string) {
+    const payment = await this.prisma.payment.findUnique({
+      where: { id: paymentId },
+      include: { sale: true },
+    });
+
+    if (!payment || payment.tenantId !== tenantId) {
+      throw new NotFoundException('Payment not found');
+    }
+
+    // Si tiene externalId de MP, consultar estado actual
+    if (payment.externalId && payment.method === PaymentMethod.MERCADO_PAGO) {
+      try {
+        const mpPayment = await this.mercadoPagoService.getPaymentInfo(payment.externalId);
+
+        // Actualizar estado local si cambió
+        const newStatus = this.mercadoPagoService.mapMercadoPagoStatus(mpPayment.status);
+        if (newStatus !== payment.status) {
+          await this.prisma.payment.update({
+            where: { id: paymentId },
+            data: { status: newStatus },
+          });
+          payment.status = newStatus;
         }
       } catch (error) {
-        console.error('Error processing webhook:', error);
+        this.logger.error('Error checking MP payment status', error);
       }
     }
 
-    return { success: true };
+    return payment;
   }
 
   /**
-   * Calcular comisión de Mercado Pago para un monto
+   * Reembolsa un pago
    */
-  calculateCommission(
-    amountCents: number,
-    paymentMethod: string,
-    installments: number = 1
-  ): number {
-    return this.mercadoPagoProvider.calculateCommission(
-      amountCents,
-      paymentMethod,
-      installments
-    );
-  }
+  async refundPayment(
+    tenantId: string,
+    paymentId: string,
+    amount?: number
+  ) {
+    const payment = await this.prisma.payment.findUnique({
+      where: { id: paymentId },
+    });
 
-  /**
-   * Obtener información de tasas de comisión
-   */
-  getCommissionRates() {
-    return this.mercadoPagoProvider.getCommissionRates();
+    if (!payment || payment.tenantId !== tenantId) {
+      throw new NotFoundException('Payment not found');
+    }
+
+    if (payment.status !== PaymentStatus.APPROVED) {
+      throw new BadRequestException('Only approved payments can be refunded');
+    }
+
+    if (payment.method === PaymentMethod.MERCADO_PAGO && payment.externalId) {
+      // Reembolsar en MP
+      const refundAmount = amount || payment.amountCents / 100;
+      await this.mercadoPagoService.refundPayment(payment.externalId, refundAmount);
+    }
+
+    // Actualizar estado local
+    await this.prisma.payment.update({
+      where: { id: paymentId },
+      data: {
+        status: PaymentStatus.REFUNDED,
+        refundedAt: new Date(),
+      },
+    });
+
+    return { success: true, message: 'Payment refunded' };
   }
 }

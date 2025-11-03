@@ -1,21 +1,30 @@
-import { IsString, IsUUID, IsOptional, IsObject, IsEmail } from 'class-validator';
+import { IsString, IsEnum, IsNumber, IsOptional, IsEmail, IsObject, Min } from 'class-validator';
+import { PaymentMethod } from '../payments.types';
 
 export class CreatePaymentDto {
-  @IsUUID()
+  @IsString()
   saleId: string;
 
-  @IsUUID()
-  userId: string;
+  @IsEnum(PaymentMethod)
+  method: PaymentMethod;
 
+  @IsNumber()
+  @Min(0)
+  amountCents: number;
+
+  @IsOptional()
   @IsString()
-  @IsOptional()
-  paymentMethodId?: string; // pix, credit_card, debit_card, etc.
+  customerId?: string;
 
+  @IsOptional()
   @IsEmail()
-  @IsOptional()
-  email?: string;
+  customerEmail?: string;
 
-  @IsObject()
   @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsObject()
   metadata?: Record<string, any>;
 }

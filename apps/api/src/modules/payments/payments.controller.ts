@@ -4,91 +4,135 @@ import {
   Get,
   Body,
   Param,
+  Query,
   Headers,
   UseGuards,
   HttpCode,
   HttpStatus,
-  Query,
+  Req,
 } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
-import { CreatePaymentDto, PaymentWebhookDto } from './dto';
-import { TenantGuard } from '@/common/guards/tenant.guard';
+import { CreatePaymentDto, ProcessMercadoPagoPaymentDto, GeneratePaymentLinkDto } from './dto';
 import { AuthGuard } from '@/common/guards/auth.guard';
+import { TenantGuard } from '@/common/guards/tenant.guard';
 
 @Controller('payments')
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
+  /**
+   * Crea un pago
+   */
   @Post()
   @UseGuards(AuthGuard, TenantGuard)
+  @HttpCode(HttpStatus.OK)
   async createPayment(
     @Headers('x-tenant-id') tenantId: string,
     @Body() dto: CreatePaymentDto
   ) {
-    return this.paymentsService.createPayment(tenantId, dto);
-  }
-
-  @Get(':id')
-  @UseGuards(AuthGuard, TenantGuard)
-  async getPayment(
-    @Headers('x-tenant-id') tenantId: string,
-    @Param('id') id: string
-  ) {
-    return this.paymentsService.getPayment(tenantId, id);
-  }
-
-  @Get('sale/:saleId')
-  @UseGuards(AuthGuard, TenantGuard)
-  async getPaymentBySale(
-    @Headers('x-tenant-id') tenantId: string,
-    @Param('saleId') saleId: string
-  ) {
-    return this.paymentsService.getPaymentBySale(tenantId, saleId);
-  }
-
-  @Post('sale/:saleId/refund')
-  @UseGuards(AuthGuard, TenantGuard)
-  async refundPayment(
-    @Headers('x-tenant-id') tenantId: string,
-    @Param('saleId') saleId: string,
-    @Body() body: { amountCents?: number }
-  ) {
-    return this.paymentsService.refundPayment(tenantId, saleId, body.amountCents);
-  }
-
-  @Get('commission/rates')
-  @UseGuards(AuthGuard)
-  async getCommissionRates() {
-    return this.paymentsService.getCommissionRates();
-  }
-
-  @Get('commission/calculate')
-  @UseGuards(AuthGuard)
-  async calculateCommission(
-    @Query('amountCents') amountCents: string,
-    @Query('paymentMethod') paymentMethod: string,
-    @Query('installments') installments?: string
-  ) {
-    const commission = this.paymentsService.calculateCommission(
-      parseInt(amountCents, 10),
-      paymentMethod,
-      installments ? parseInt(installments, 10) : 1
-    );
+    const result = await this.paymentsService.createPayment(tenantId, dto);
 
     return {
-      amountCents: parseInt(amountCents, 10),
-      commissionCents: commission,
-      netAmountCents: parseInt(amountCents, 10) - commission,
+      success: result.success,
+      data: result,
     };
   }
 
   /**
-   * Webhook endpoint (sin autenticación, verificar signature de MP)
-   * TODO: Implementar verificación de signature
+   * Genera un link de pago con Mercado Pago
    */
-  @Post('webhooks/mercadopago')
+  @Post('generate-link')
+  @UseGuards(AuthGuard, TenantGuard)
   @HttpCode(HttpStatus.OK)
-  async handleMercadoPagoWebhook(@Body() body: PaymentWebhookDto) {
-    return this.paymentsService.handleWebhook(body);
+  async generatePaymentLink(
+    @Headers('x-tenant-id') tenantId: string,
+    @Body() dto: GeneratePaymentLinkDto
+  ) {
+    const result = await this.paymentsService.generatePaymentLink(tenantId, dto.saleId);
+
+    return {
+      success: true,
+      data: result,
+    };
+  }
+
+  /**
+   * Genera un QR code para pago presencial
+   */
+  @Post('generate-qr')
+  @UseGuards(AuthGuard, TenantGuard)
+  @HttpCode(HttpStatus.OK)
+  async generateQRPayment(
+    @Headers('x-tenant-id') tenantId: string,
+    @Body() dto: { saleId: string }
+  ) {
+    const result = await this.paymentsService.createPayment(tenantId, {
+      saleId: dto.saleId,
+      method: 'qr_code' as any,
+      amountCents: 0, // Se obtiene de la venta
+    });
+
+    return {
+      success: true,
+      data: result,
+    };
+  }
+
+  /**
+   * Obtiene el estado de un pago
+   */
+  @Get(':id/status')
+  @UseGuards(AuthGuard, TenantGuard)
+  async getPaymentStatus(
+    @Headers('x-tenant-id') tenantId: string,
+    @Param('id') paymentId: string
+  ) {
+    const payment = await this.paymentsService.getPaymentStatus(tenantId, paymentId);
+
+    return {
+      success: true,
+      data: payment,
+    };
+  }
+
+  /**
+   * Reembolsa un pago
+   */
+  @Post(':id/refund')
+  @UseGuards(AuthGuard, TenantGuard)
+  @HttpCode(HttpStatus.OK)
+  async refundPayment(
+    @Headers('x-tenant-id') tenantId: string,
+    @Param('id') paymentId: string,
+    @Body() body: { amount?: number }
+  ) {
+    const result = await this.paymentsService.refundPayment(
+      tenantId,
+      paymentId,
+      body.amount
+    );
+
+    return result;
+  }
+
+  /**
+   * Lista pagos de un tenant (con filtros)
+   */
+  @Get()
+  @UseGuards(AuthGuard, TenantGuard)
+  async listPayments(
+    @Headers('x-tenant-id') tenantId: string,
+    @Query('saleId') saleId?: string,
+    @Query('status') status?: string,
+    @Query('method') method?: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 20
+  ) {
+    // TODO: Implementar en PaymentsService
+    return {
+      success: true,
+      data: [],
+      meta: { page, limit, total: 0 },
+    };
   }
 }

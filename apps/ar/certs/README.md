@@ -1,53 +1,64 @@
-# Certificados AFIP
-
-Este directorio contiene los certificados necesarios para la integración con AFIP.
+# Certificados AFIP/ARCA
 
 ## ⚠️ IMPORTANTE
+Los certificados NUNCA deben commitearse al repositorio.
 
-**NUNCA** commitear los archivos de certificados (.pem, .key, .crt) al repositorio.
-Estos archivos contienen información sensible y son específicos de cada ambiente.
+## Configuración para Desarrollo (Testing)
 
-## Estructura de Archivos
+1. **Obtener certificado de homologación**:
+   - Ir a: https://www.afip.gob.ar/ws/WSAA/
+   - Descargar certificado de prueba
+   - CUIT de testing: 20409378472
 
-- `cert.pem`: Certificado de producción (AFIP real)
-- `key.pem`: Clave privada de producción
-- `cert-test.pem`: Certificado de homologación (testing)
-- `key-test.pem`: Clave privada de homologación
-
-## Generación de Certificados
-
-Ver la guía completa en: `docs/argentina/AFIP-setup-guide.md`
-
-### Pasos Rápidos
-
-1. Generar clave privada:
-```bash
-openssl genrsa -out key.pem 2048
+2. **Ubicación de archivos**:
+```
+apps/ar/certs/
+├── cert-test.pem      # Certificado de testing
+├── key-test.pem       # Clave privada de testing
+├── cert-prod.pem      # Certificado de producción
+└── key-prod.pem       # Clave privada de producción
 ```
 
-2. Generar CSR (Certificate Signing Request):
+3. **Generar certificado de prueba** (si no lo tienes):
 ```bash
-openssl req -new -key key.pem -out csr.pem \
-  -subj "/C=AR/O=TU_EMPRESA/CN=TU_NOMBRE/serialNumber=CUIT 20123456789"
+# Generar clave privada
+openssl genrsa -out key-test.pem 2048
+
+# Generar CSR (Certificate Signing Request)
+openssl req -new -key key-test.pem -out cert-test.csr \
+  -subj "/C=AR/O=Test/CN=testing/serialNumber=CUIT 20409378472"
+
+# Subir el CSR a AFIP para obtener el certificado firmado
 ```
 
-3. Subir el CSR a AFIP:
-   - Ingresar a https://auth.afip.gob.ar
-   - Administrador de Relaciones → Nuevo Certificado
-   - Seleccionar "Webservice Factura Electrónica"
-   - Pegar contenido de `csr.pem`
+## Configuración para Producción
 
-4. Descargar certificado de AFIP y guardar como `cert.pem`
+1. **Generar certificado real**:
+   - Acceder con Clave Fiscal nivel 3 o superior
+   - Ir a: AFIP > Administrador de Relaciones de Clave Fiscal
+   - Agregar relación "Webservice de Factura Electrónica"
+   - Generar certificado (válido por 3 años)
 
-## Vencimiento
+2. **Variables de entorno**:
+```env
+# Development
+AFIP_ENVIRONMENT=testing
+AFIP_CERT_PATH=./apps/ar/certs/cert-test.pem
+AFIP_KEY_PATH=./apps/ar/certs/key-test.pem
 
-Los certificados AFIP tienen una validez limitada (generalmente 2 años).
+# Production
+AFIP_ENVIRONMENT=production
+AFIP_CERT_PATH=./apps/ar/certs/cert-prod.pem
+AFIP_KEY_PATH=./apps/ar/certs/key-prod.pem
+```
 
-**CRÍTICO**: Configurar alertas 30 días antes del vencimiento para renovar.
+## Renovación de Certificados
 
-## Backup
+Los certificados de AFIP vencen cada 3 años. Configurar alerta 30 días antes.
 
-Mantener backup seguro de los certificados en:
-- Almacenamiento cifrado (1Password, Vault, etc)
-- NO en el repositorio Git
-- NO en carpetas compartidas sin cifrar
+## Seguridad
+
+- Certificados deben estar en .gitignore
+- En producción, usar secrets manager (AWS Secrets Manager, etc.)
+- Nunca compartir certificados por email o chat
+- Backup encriptado de certificados

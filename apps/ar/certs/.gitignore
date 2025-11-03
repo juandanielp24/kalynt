@@ -1,30 +1,11 @@
-# CRÍTICO: Nunca commitear certificados AFIP
-# Los certificados contienen información sensible para facturación electrónica
-
-# Certificados de producción
-cert.pem
-key.pem
-*.crt
+# CRÍTICO: NUNCA commitear certificados
+*.pem
 *.key
-
-# Certificados de testing
-cert-test.pem
-key-test.pem
-
-# Archivos PKCS12
+*.crt
 *.p12
 *.pfx
-
-# CSR (Certificate Signing Request)
 *.csr
 
-# Archivos temporales de OpenSSL
-*.old
-*.srl
-
-# Backups
-*.bak
-*.backup
-
-# IMPORTANTE: Mantener solo este archivo .gitignore
+# Solo permitir README
+!README.md
 !.gitignore

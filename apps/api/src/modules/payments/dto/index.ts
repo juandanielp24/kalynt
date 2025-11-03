@@ -1,2 +1,3 @@
 export * from './create-payment.dto';
-export * from './payment-webhook.dto';
+export * from './process-payment.dto';
+export * from './webhook-notification.dto';

@@ -1,417 +1,307 @@
-import { Injectable, Logger, Inject } from '@nestjs/common';
+import { Injectable, Logger, Inject, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import Afip from '@afipsdk/afip.js';
 import { PrismaClient } from '@retail/database';
+import { WSFEv1Service } from './wsfev1/wsfev1.service';
+import { WSAAService } from './wsaa/wsaa.service';
 import {
-  AFIPConfig,
-  AFIPInvoiceData,
-  AFIPInvoiceResponse,
-  AFIPInvoiceType,
-  AFIPDocumentType,
-  AFIPConceptType,
-  AFIPIVACode,
-  InvoiceGenerationRequest,
-  AFIPServerStatus,
-  SalesPoint,
-} from './afip.types';
-import { getAFIPConfig, validateAFIPConfig } from './afip.config';
-import { validateCUIT } from './utils/cuit-validator';
-import { calculateIVA, getIVACodeFromRate } from './utils/iva-calculator';
-import { formatInvoiceNumber, generateInvoiceQRData } from './utils/invoice-number';
-import * as fs from 'fs';
+  AFIP_INVOICE_TYPES,
+  AFIP_DOCUMENT_TYPES,
+  AFIP_CONCEPT_TYPES,
+  AFIP_IVA_CODES,
+} from '../constants/argentina.constants';
+import { CuitValidator } from './utils/cuit-validator';
+import { DateFormatter } from './utils/date-formatter';
+import { InvoiceFormatter } from './utils/invoice-formatter';
+import { InvoiceMapper } from './utils/invoice-mapper';
+import { InvoiceRequest, InvoiceResponse, InvoiceInfo } from './wsfev1/wsfev1.types';
 
+export interface GenerateInvoiceRequest {
+  saleId: string;
+  tenantId: string;
+  invoiceType: 'A' | 'B' | 'C' | 'E';
+  customerCuit?: string;
+  customerName?: string;
+  items: Array<{
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    taxRate: number;
+    total: number;
+  }>;
+  subtotal: number;
+  tax: number;
+  total: number;
+}
+
+export interface AFIPInvoiceResponse {
+  success: boolean;
+  cae?: string;
+  cae_vencimiento?: string;
+  numero_comprobante?: number;
+  resultado?: string;
+  errors?: Array<{ code: number; message: string }>;
+}
+
+/**
+ * AFIPService - Servicio principal (Orquestador)
+ *
+ * Maneja la lógica de negocio completa de facturación electrónica:
+ * - Integración con base de datos (ventas)
+ * - Generación de facturas para ventas
+ * - Consulta de facturas
+ * - Validaciones de negocio
+ */
 @Injectable()
 export class AFIPService {
   private readonly logger = new Logger(AFIPService.name);
-  private afip: any;
-  private config: AFIPConfig;
-  private initialized = false;
 
   constructor(
+    @Inject('PRISMA') private prisma: PrismaClient,
     private configService: ConfigService,
-    @Inject('PRISMA') private prisma: PrismaClient
-  ) {
+    private wsfev1Service: WSFEv1Service,
+    private wsaaService: WSAAService,
+  ) {}
+
+  /**
+   * Genera una factura electrónica para una venta
+   */
+  async generateInvoiceForSale(request: GenerateInvoiceRequest): Promise<{
+    success: boolean;
+    cae?: string;
+    caeExpiration?: string;
+    invoiceNumber?: string;
+    invoiceType?: string;
+    afipResponse?: AFIPInvoiceResponse;
+  }> {
     try {
-      this.config = getAFIPConfig(configService);
-      validateAFIPConfig(this.config);
+      this.logger.log(`Generating invoice for sale ${request.saleId}`);
 
-      // Solo inicializar si existen los certificados
-      if (fs.existsSync(this.config.certPath) && fs.existsSync(this.config.keyPath)) {
-        this.afip = new Afip({
-          CUIT: this.config.cuit,
-          cert: this.config.certPath,
-          key: this.config.keyPath,
-          production: this.config.production,
-        });
-
-        this.initialized = true;
-
-        this.logger.log(
-          `AFIP Service initialized for CUIT ${this.config.cuit} (${
-            this.config.production ? 'PRODUCTION' : 'TESTING'
-          })`
-        );
-      } else {
-        this.logger.warn(
-          'AFIP certificates not found. Service will be limited. ' +
-          'Generate certificates following docs/argentina/AFIP-setup-guide.md'
-        );
-      }
-    } catch (error) {
-      this.logger.error('Error initializing AFIP service', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Verifica que el servicio esté inicializado
-   */
-  private ensureInitialized(): void {
-    if (!this.initialized) {
-      throw new Error(
-        'AFIP service not initialized. Please configure certificates.'
-      );
-    }
-  }
-
-  /**
-   * Genera una factura electrónica en AFIP
-   */
-  async generateInvoice(
-    request: InvoiceGenerationRequest
-  ): Promise<AFIPInvoiceResponse> {
-    this.ensureInitialized();
-
-    try {
-      // 1. Obtener tenant y validar configuración AFIP
-      const tenant = await this.prisma.tenant.findUnique({
-        where: { id: request.tenantId },
-      });
-
-      if (!tenant) {
-        throw new Error('Tenant not found');
-      }
-
-      if (!tenant.cuit) {
-        throw new Error('Tenant CUIT not configured');
-      }
-
-      // 2. Determinar tipo de comprobante AFIP según tipo de factura
-      const tipoComprobante = this.mapInvoiceType(request.invoiceType);
-
-      // 3. Obtener último número de comprobante
-      const lastInvoiceNumber = await this.getLastInvoiceNumber(
-        tipoComprobante,
-        this.config.puntoVenta
-      );
-      const nextInvoiceNumber = lastInvoiceNumber + 1;
-
-      // 4. Preparar datos del comprobante
-      const invoiceData = this.prepareInvoiceData(
-        request,
-        tipoComprobante,
-        nextInvoiceNumber
-      );
-
-      // 5. Enviar a AFIP
-      this.logger.log(
-        `Sending invoice to AFIP: Type ${tipoComprobante}, Number ${nextInvoiceNumber}`
-      );
-
-      const response = await this.afip.ElectronicBilling.createVoucher(invoiceData);
-
-      // 6. Guardar transacción para auditoría
-      await this.saveAFIPTransaction(request.saleId, {
-        request: invoiceData,
-        response,
-      });
-
-      // 7. Procesar respuesta
-      if (response.CAE) {
-        this.logger.log(`Invoice approved. CAE: ${response.CAE}`);
-
-        // Generar QR code
-        const qrData = generateInvoiceQRData({
-          cuit: this.config.cuit,
-          pointOfSale: this.config.puntoVenta,
-          invoiceType: tipoComprobante,
-          invoiceNumber: nextInvoiceNumber,
-          total: request.total / 100,
-          currency: 'PES',
-          cae: response.CAE,
-          caeExpiration: response.CAEFchVto,
-          documentType: invoiceData.tipo_documento,
-          documentNumber: invoiceData.numero_documento,
-        });
-
-        return {
-          success: true,
-          cae: response.CAE,
-          cae_vencimiento: response.CAEFchVto,
-          numero_comprobante: nextInvoiceNumber,
-          fecha_proceso: response.FchProceso,
-          resultado: response.Resultado,
-          qr_code: qrData,
-        };
-      } else {
-        this.logger.error('Invoice rejected by AFIP', response.Observaciones);
-
-        return {
-          success: false,
-          errors: response.Observaciones?.map((obs: any) => ({
-            code: obs.Code,
-            message: obs.Msg,
-          })) || [],
-          observations: response.Observaciones?.map((obs: any) => ({
-            code: obs.Code,
-            message: obs.Msg,
-          })) || [],
-        };
-      }
-    } catch (error: any) {
-      this.logger.error('Error generating invoice', error);
-
-      return {
-        success: false,
-        errors: [
-          {
-            code: -1,
-            message: error.message || 'Unknown error',
-          },
-        ],
-      };
-    }
-  }
-
-  /**
-   * Obtiene el último número de comprobante autorizado
-   */
-  async getLastInvoiceNumber(
-    tipoComprobante: AFIPInvoiceType,
-    puntoVenta: number
-  ): Promise<number> {
-    this.ensureInitialized();
-
-    try {
-      const lastNumber = await this.afip.ElectronicBilling.getLastVoucher(
-        puntoVenta,
-        tipoComprobante
-      );
-
-      this.logger.debug(
-        `Last invoice number for type ${tipoComprobante}, PV ${puntoVenta}: ${lastNumber}`
-      );
-
-      return lastNumber || 0;
-    } catch (error) {
-      this.logger.error('Error getting last invoice number', error);
-      return 0;
-    }
-  }
-
-  /**
-   * Prepara los datos del comprobante según formato AFIP
-   */
-  private prepareInvoiceData(
-    request: InvoiceGenerationRequest,
-    tipoComprobante: AFIPInvoiceType,
-    numeroComprobante: number
-  ): AFIPInvoiceData {
-    const today = new Date();
-    const fechaComprobante = this.formatDate(today);
-
-    // Convertir centavos a pesos con 2 decimales
-    const subtotal = Math.round(request.subtotal) / 100;
-    const tax = Math.round(request.tax) / 100;
-    const total = Math.round(request.total) / 100;
-
-    // Determinar tipo y número de documento del cliente
-    let tipoDocumento = AFIPDocumentType.CONSUMIDOR_FINAL;
-    let numeroDocumento = '0';
-
-    if (request.customerCuit) {
-      tipoDocumento = AFIPDocumentType.CUIT;
-      numeroDocumento = request.customerCuit.replace(/[-]/g, '');
-    } else if (request.customerDocumentType && request.customerDocumentNumber) {
-      tipoDocumento = request.customerDocumentType;
-      numeroDocumento = request.customerDocumentNumber;
-    }
-
-    // Preparar IVA discriminado (RG 5614/2024: obligatorio en todos los tipos)
-    // Agrupar por tasa si hay múltiples items con diferentes tasas
-    const ivaByRate = new Map<number, { base: number; importe: number }>();
-
-    for (const item of request.items) {
-      const ivaCode = getIVACodeFromRate(item.taxRate);
-      const itemSubtotal = (item.quantity * item.unitPrice) / 100;
-      const itemTax = calculateIVA(itemSubtotal, ivaCode);
-
-      const existing = ivaByRate.get(ivaCode) || { base: 0, importe: 0 };
-      ivaByRate.set(ivaCode, {
-        base: existing.base + itemSubtotal,
-        importe: existing.importe + itemTax,
-      });
-    }
-
-    const iva = Array.from(ivaByRate.entries()).map(([codigo, amounts]) => ({
-      codigo,
-      base_imponible: Math.round(amounts.base * 100) / 100,
-      importe: Math.round(amounts.importe * 100) / 100,
-    }));
-
-    // Preparar items opcionales
-    const items = request.items.map((item) => ({
-      codigo: item.description.slice(0, 20),
-      descripcion: item.description,
-      cantidad: item.quantity,
-      unidad_medida: 'unidades',
-      precio_unitario: item.unitPrice / 100,
-      importe_iva: (item.total * item.taxRate) / 100,
-      importe_total: item.total / 100,
-    }));
-
-    const invoiceData: AFIPInvoiceData = {
-      tipo_comprobante: tipoComprobante,
-      punto_venta: this.config.puntoVenta,
-      numero_comprobante: numeroComprobante,
-      fecha_comprobante: fechaComprobante,
-      concepto: AFIPConceptType.PRODUCTOS,
-
-      tipo_documento: tipoDocumento,
-      numero_documento: numeroDocumento,
-
-      importe_total: total,
-      importe_neto: subtotal,
-      importe_iva: tax,
-      importe_tributos: 0,
-      importe_operaciones_exentas: 0,
-
-      iva,
-      items,
-
-      codigo_moneda: 'PES',
-      cotizacion_moneda: 1,
-    };
-
-    // Agregar comprobante asociado si es nota de crédito/débito
-    if (request.associatedInvoice) {
-      invoiceData.comprobantes_asociados = [
-        {
-          tipo: request.associatedInvoice.type,
-          punto_venta: request.associatedInvoice.pointOfSale,
-          numero: request.associatedInvoice.number,
-        },
-      ];
-    }
-
-    return invoiceData;
-  }
-
-  /**
-   * Mapea tipo de factura simplificado a código AFIP
-   */
-  private mapInvoiceType(invoiceType: string): AFIPInvoiceType {
-    const mapping: Record<string, AFIPInvoiceType> = {
-      A: AFIPInvoiceType.FACTURA_A,
-      B: AFIPInvoiceType.FACTURA_B,
-      C: AFIPInvoiceType.FACTURA_C,
-      E: AFIPInvoiceType.FACTURA_E,
-    };
-
-    const mapped = mapping[invoiceType];
-    if (!mapped) {
-      throw new Error(`Invalid invoice type: ${invoiceType}`);
-    }
-
-    return mapped;
-  }
-
-  /**
-   * Formatea fecha para AFIP (YYYYMMDD)
-   */
-  private formatDate(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}${month}${day}`;
-  }
-
-  /**
-   * Guarda transacción AFIP para auditoría
-   */
-  private async saveAFIPTransaction(saleId: string, data: any): Promise<void> {
-    try {
-      // Obtener tenantId de la venta
+      // 1. Validar y obtener datos de la venta
       const sale = await this.prisma.sale.findUnique({
-        where: { id: saleId },
-        select: { tenantId: true },
+        where: { id: request.saleId },
+        include: {
+          tenant: true,
+          items: true,
+        },
       });
 
       if (!sale) {
-        this.logger.warn(`Sale ${saleId} not found for audit log`);
-        return;
+        throw new BadRequestException('Sale not found');
       }
 
-      await this.prisma.auditLog.create({
+      if (sale.cae) {
+        throw new BadRequestException('Invoice already generated for this sale');
+      }
+
+      // 2. Determinar tipo de comprobante
+      const invoiceTypeCode = this.getInvoiceTypeCode(request.invoiceType);
+      const puntoVenta = this.configService.get<number>('AFIP_PUNTO_VENTA', 1);
+
+      // 3. Obtener próximo número de comprobante
+      const lastNumber = await this.wsfev1Service.getLastInvoiceNumber(
+        invoiceTypeCode,
+        puntoVenta
+      );
+      const nextNumber = lastNumber + 1;
+
+      this.logger.debug(`Next invoice number: ${nextNumber}`);
+
+      // 4. Preparar datos para AFIP
+      const afipRequest = await this.buildAFIPRequest(
+        sale,
+        request,
+        invoiceTypeCode,
+        puntoVenta,
+        nextNumber
+      );
+
+      // 5. Enviar a AFIP
+      const afipResponse = await this.wsfev1Service.generateInvoice(afipRequest);
+
+      if (afipResponse.result !== 'A') {
+        this.logger.error('AFIP invoice generation failed', afipResponse.errors);
+
+        // Guardar error en la venta
+        await this.prisma.sale.update({
+          where: { id: request.saleId },
+          data: {
+            invoiceError: JSON.stringify(afipResponse.errors),
+          },
+        });
+
+        return {
+          success: false,
+          afipResponse: {
+            success: false,
+            errors: afipResponse.errors,
+          },
+        };
+      }
+
+      // 6. Actualizar venta con datos de AFIP
+      const invoiceNumber = InvoiceFormatter.formatInvoiceNumber(puntoVenta, afipResponse.invoiceNumber!);
+
+      await this.prisma.sale.update({
+        where: { id: request.saleId },
         data: {
-          tenantId: sale.tenantId,
-          action: 'create',
-          entity: 'afip_invoice',
-          entityId: saleId,
-          changes: data,
+          invoiceType: request.invoiceType,
+          invoiceNumber,
+          cae: afipResponse.cae,
+          caeExpiration: this.parseAFIPDate(afipResponse.caeExpirationDate!),
+          afipResponse: JSON.stringify(afipResponse),
         },
       });
+
+      this.logger.log(`Invoice generated successfully: ${invoiceNumber}, CAE: ${afipResponse.cae}`);
+
+      return {
+        success: true,
+        cae: afipResponse.cae,
+        caeExpiration: afipResponse.caeExpirationDate,
+        invoiceNumber,
+        invoiceType: request.invoiceType,
+        afipResponse: {
+          success: true,
+          cae: afipResponse.cae,
+          cae_vencimiento: afipResponse.caeExpirationDate,
+          numero_comprobante: afipResponse.invoiceNumber,
+          resultado: afipResponse.result,
+        },
+      };
     } catch (error) {
-      this.logger.error('Error saving AFIP transaction', error);
-      // No lanzar error, solo registrar
-    }
-  }
-
-  /**
-   * Valida que el CUIT sea correcto (dígito verificador)
-   */
-  validateCUIT(cuit: string): boolean {
-    return validateCUIT(cuit);
-  }
-
-  /**
-   * Obtiene información de un comprobante ya emitido
-   */
-  async getInvoiceInfo(
-    tipoComprobante: AFIPInvoiceType,
-    puntoVenta: number,
-    numeroComprobante: number
-  ): Promise<any> {
-    this.ensureInitialized();
-
-    try {
-      return await this.afip.ElectronicBilling.getVoucherInfo(
-        numeroComprobante,
-        puntoVenta,
-        tipoComprobante
-      );
-    } catch (error) {
-      this.logger.error('Error getting invoice info', error);
+      this.logger.error(`Error generating invoice for sale ${request.saleId}`, error);
       throw error;
     }
   }
 
   /**
-   * Obtiene puntos de venta habilitados
+   * Construye el request para AFIP basado en la venta
    */
-  async getSalesPoints(): Promise<SalesPoint[]> {
-    this.ensureInitialized();
+  private async buildAFIPRequest(
+    sale: any,
+    request: GenerateInvoiceRequest,
+    invoiceTypeCode: number,
+    puntoVenta: number,
+    numeroComprobante: number
+  ): Promise<InvoiceRequest> {
+    const today = DateFormatter.toAFIPFormat(new Date());
 
+    // Determinar tipo y número de documento del cliente
+    let tipoDocumento: number;
+    let numeroDocumento: number;
+
+    if (request.invoiceType === 'B' || request.invoiceType === 'C') {
+      // Factura B/C: si no hay CUIT, usar Consumidor Final
+      if (request.customerCuit && CuitValidator.validate(request.customerCuit)) {
+        tipoDocumento = AFIP_DOCUMENT_TYPES.CUIT;
+        numeroDocumento = parseInt(request.customerCuit.replace(/[-\s]/g, ''), 10);
+      } else {
+        tipoDocumento = AFIP_DOCUMENT_TYPES.CONSUMIDOR_FINAL;
+        numeroDocumento = 0;
+      }
+    } else {
+      // Factura A: CUIT obligatorio
+      if (!request.customerCuit || !CuitValidator.validate(request.customerCuit)) {
+        throw new BadRequestException('Valid CUIT required for Factura A');
+      }
+      tipoDocumento = AFIP_DOCUMENT_TYPES.CUIT;
+      numeroDocumento = parseInt(request.customerCuit.replace(/[-\s]/g, ''), 10);
+    }
+
+    // Calcular importes
+    const subtotal = request.subtotal;
+    const tax = request.tax;
+    const total = request.total;
+
+    // Agrupar IVA por alícuota usando InvoiceMapper
+    const ivaArray = [];
+    if (tax > 0) {
+      // Asumir IVA 21% por defecto (simplificado)
+      // En producción, deberías calcular por cada alícuota usando request.items
+      ivaArray.push({
+        id: AFIP_IVA_CODES.IVA_21,
+        baseAmount: subtotal,
+        taxAmount: tax,
+      });
+    }
+
+    return {
+      concept: AFIP_CONCEPT_TYPES.PRODUCTOS,
+      invoiceType: invoiceTypeCode,
+      salePoint: puntoVenta,
+      invoiceNumber: numeroComprobante,
+      invoiceDate: today,
+      docType: tipoDocumento,
+      docNum: numeroDocumento,
+      totalAmount: total,
+      netAmount: subtotal,
+      exemptAmount: 0,
+      taxAmount: tax,
+      untaxedAmount: 0,
+      currency: 'PES',
+      exchangeRate: 1,
+      iva: ivaArray,
+    };
+  }
+
+  /**
+   * Obtiene el código numérico del tipo de factura
+   */
+  private getInvoiceTypeCode(type: string): number {
+    const typeMap: Record<string, number> = {
+      A: AFIP_INVOICE_TYPES.FACTURA_A,
+      B: AFIP_INVOICE_TYPES.FACTURA_B,
+      C: AFIP_INVOICE_TYPES.FACTURA_C,
+      E: AFIP_INVOICE_TYPES.FACTURA_E,
+    };
+
+    const code = typeMap[type];
+    if (!code) {
+      throw new BadRequestException(`Invalid invoice type: ${type}`);
+    }
+
+    return code;
+  }
+
+  /**
+   * Parsea una fecha en formato AFIP (YYYYMMDD) a Date
+   */
+  private parseAFIPDate(dateStr: string): Date {
+    return DateFormatter.fromAFIPFormat(dateStr);
+  }
+
+  /**
+   * Consulta información de una factura en AFIP
+   */
+  async getInvoiceInfo(tenantId: string, invoiceNumber: string): Promise<InvoiceInfo | null> {
     try {
-      const response = await this.afip.ElectronicBilling.getSalesPoints();
-      return response.map((point: any) => ({
-        numero: point.PtoVta,
-        bloqueado: point.Bloqueado === 'S',
-        fecha_baja: point.FchBaja,
-        tipo_emision: point.EmisionTipo,
-      }));
+      // Parsear número de factura (formato: 00001-00000123)
+      const { salePoint, invoiceNumber: num } = InvoiceFormatter.parseInvoiceNumber(invoiceNumber);
+
+      // Buscar en DB para obtener tipo de comprobante
+      const sale = await this.prisma.sale.findFirst({
+        where: {
+          tenantId,
+          invoiceNumber,
+        },
+      });
+
+      if (!sale) {
+        throw new BadRequestException('Invoice not found');
+      }
+
+      const tipoComprobante = this.getInvoiceTypeCode(sale.invoiceType!);
+
+      // Consultar en AFIP
+      const info = await this.wsfev1Service.queryInvoice({
+        invoiceType: tipoComprobante,
+        salePoint,
+        invoiceNumber: num,
+      });
+
+      return info;
     } catch (error) {
-      this.logger.error('Error getting sales points', error);
+      this.logger.error('Error querying invoice info', error);
       throw error;
     }
   }
@@ -419,38 +309,87 @@ export class AFIPService {
   /**
    * Verifica el estado del servidor AFIP
    */
-  async checkServerStatus(): Promise<AFIPServerStatus> {
-    this.ensureInitialized();
-
+  async checkStatus(): Promise<{
+    connected: boolean;
+    environment: string;
+    servers: {
+      app: string;
+      db: string;
+      auth: string;
+    };
+  }> {
     try {
-      const response = await this.afip.ElectronicBilling.getServerStatus();
+      const status = await this.wsfev1Service.getServerStatus();
+      const isProduction = this.configService.get('AFIP_ENVIRONMENT') === 'production';
 
       return {
-        appserver: response.AppServer === 'OK' ? 'OK' : 'ERROR',
-        dbserver: response.DbServer === 'OK' ? 'OK' : 'ERROR',
-        authserver: response.AuthServer === 'OK' ? 'OK' : 'ERROR',
+        connected: true,
+        environment: isProduction ? 'production' : 'testing',
+        servers: {
+          app: status.appServer,
+          db: status.dbServer,
+          auth: status.authServer,
+        },
       };
-    } catch (error: any) {
-      this.logger.error('Error checking AFIP server status', error);
+    } catch (error) {
+      this.logger.error('AFIP connection check failed', error);
       return {
-        appserver: 'ERROR',
-        dbserver: 'ERROR',
-        authserver: 'ERROR',
+        connected: false,
+        environment: this.configService.get('AFIP_ENVIRONMENT') === 'production' ? 'production' : 'testing',
+        servers: {
+          app: 'ERROR',
+          db: 'ERROR',
+          auth: 'ERROR',
+        },
       };
     }
   }
 
   /**
-   * Obtiene el token de autorización de WSAA (para debugging)
+   * Anula una factura (genera nota de crédito)
    */
-  async getAuthToken(): Promise<any> {
-    this.ensureInitialized();
+  async annulInvoice(tenantId: string, saleId: string, reason: string) {
+    // TODO: Implementar generación de nota de crédito
+    // Similar a generateInvoiceForSale pero con tipo NOTA_CREDITO_X
+    this.logger.warn('Invoice annulment not implemented yet');
+    throw new Error('Not implemented');
+  }
 
-    try {
-      return await this.afip.getAuth();
-    } catch (error) {
-      this.logger.error('Error getting auth token', error);
-      throw error;
-    }
+  /**
+   * Obtiene el próximo número disponible para un tipo de comprobante
+   */
+  async getNextInvoiceNumber(invoiceType: string): Promise<string> {
+    const invoiceTypeCode = this.getInvoiceTypeCode(invoiceType);
+    const puntoVenta = this.configService.get<number>('AFIP_PUNTO_VENTA', 1);
+
+    const lastNumber = await this.wsfev1Service.getLastInvoiceNumber(
+      invoiceTypeCode,
+      puntoVenta
+    );
+
+    const nextNumber = lastNumber + 1;
+    return InvoiceFormatter.formatInvoiceNumber(puntoVenta, nextNumber);
+  }
+
+  /**
+   * Formatea un número de factura
+   */
+  formatInvoiceNumber(salePoint: number, invoiceNumber: number): string {
+    return InvoiceFormatter.formatInvoiceNumber(salePoint, invoiceNumber);
+  }
+
+  /**
+   * Obtiene la fecha actual en formato AFIP
+   */
+  getCurrentAFIPDate(): string {
+    return DateFormatter.toAFIPFormat();
+  }
+
+  /**
+   * Limpia las credenciales en caché (útil para testing)
+   */
+  clearCache(): void {
+    this.wsaaService.clearCredentials();
+    this.logger.debug('AFIP cache cleared');
   }
 }
