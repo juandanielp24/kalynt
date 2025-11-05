@@ -1,14 +1,23 @@
 import { Controller, Post, Get, Body, Query, Headers, UseGuards, Req } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { InventoryService } from './inventory.service';
 import { AdjustStockDto, TransferStockDto } from './dto';
 import { TenantGuard } from '@/common/guards/tenant.guard';
+import { AuthGuard } from '@/common/guards/auth.guard';
+import { RequirePermission } from '@/rbac/decorators/require-permission.decorator';
+import { AuditLog } from '@/rbac/interceptors/audit-log.interceptor';
+import { PermissionResource, PermissionAction } from '@prisma/client';
 
+@ApiTags('Inventory')
 @Controller('inventory')
-@UseGuards(TenantGuard)
+@UseGuards(AuthGuard, TenantGuard)
+@ApiBearerAuth()
 export class InventoryController {
   constructor(private readonly inventoryService: InventoryService) {}
 
   @Post('adjust')
+  @RequirePermission(PermissionResource.STOCK, PermissionAction.UPDATE)
+  @AuditLog({ action: 'UPDATE', entity: 'STOCK', description: 'Adjusted stock quantity' })
   async adjustStock(
     @Headers('x-tenant-id') tenantId: string,
     @Req() req: any,
@@ -28,6 +37,8 @@ export class InventoryController {
   }
 
   @Post('transfer')
+  @RequirePermission(PermissionResource.STOCK, PermissionAction.UPDATE)
+  @AuditLog({ action: 'UPDATE', entity: 'STOCK', description: 'Transferred stock between locations' })
   async transferStock(
     @Headers('x-tenant-id') tenantId: string,
     @Req() req: any,
@@ -46,6 +57,7 @@ export class InventoryController {
   }
 
   @Get('movements')
+  @RequirePermission(PermissionResource.STOCK, PermissionAction.READ)
   async getMovements(
     @Headers('x-tenant-id') tenantId: string,
     @Query('productId') productId?: string,
@@ -63,6 +75,7 @@ export class InventoryController {
   }
 
   @Get('low-stock')
+  @RequirePermission(PermissionResource.STOCK, PermissionAction.READ)
   async getLowStock(
     @Headers('x-tenant-id') tenantId: string,
     @Query('locationId') locationId?: string
@@ -71,6 +84,7 @@ export class InventoryController {
   }
 
   @Get('summary')
+  @RequirePermission(PermissionResource.STOCK, PermissionAction.READ)
   async getSummary(
     @Headers('x-tenant-id') tenantId: string,
     @Query('locationId') locationId?: string

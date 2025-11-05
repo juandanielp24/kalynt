@@ -1,5 +1,6 @@
 import { Injectable, Inject, BadRequestException } from '@nestjs/common';
 import { PrismaClient } from '@retail/database';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 export enum StockMovementType {
   SALE = 'sale',
@@ -11,7 +12,10 @@ export enum StockMovementType {
 
 @Injectable()
 export class InventoryService {
-  constructor(@Inject('PRISMA') private prisma: PrismaClient) {}
+  constructor(
+    @Inject('PRISMA') private prisma: PrismaClient,
+    private eventEmitter: EventEmitter2
+  ) {}
 
   /**
    * Ajuste manual de stock
@@ -75,6 +79,16 @@ export class InventoryService {
             reason,
           },
         },
+      });
+
+      // Emit event for WhatsApp stock alerts (outside transaction)
+      setImmediate(() => {
+        this.eventEmitter.emit('stock.updated', {
+          productId,
+          tenantId,
+          previousStock: stock.quantity,
+          newStock: newQuantity,
+        });
       });
 
       return updatedStock;

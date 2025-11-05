@@ -3,11 +3,12 @@ import { TerminusModule } from '@nestjs/terminus';
 import { HttpModule } from '@nestjs/axios';
 import { HealthController } from './health.controller';
 import { DatabaseHealthIndicator } from './indicators/database.indicator';
+import { RedisHealthIndicator } from './indicators/redis.health';
 import { PrismaClient } from '@retail/database';
 
 @Module({
   imports: [TerminusModule, HttpModule],
   controllers: [HealthController],
-  providers: [DatabaseHealthIndicator, PrismaClient],
+  providers: [DatabaseHealthIndicator, RedisHealthIndicator, PrismaClient],
 })
 export class HealthModule {}

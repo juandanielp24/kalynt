@@ -1,56 +1,93 @@
-# Multi-stage build for production
-FROM node:20-alpine AS builder
+# ================================
+# Base Stage
+# ================================
+FROM node:20-alpine AS base
 
 # Install pnpm
-RUN npm install -g pnpm
+RUN npm install -g pnpm@8
 
 WORKDIR /app
 
-# Copy workspace files
+# Copy root package files
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY turbo.json ./
+COPY .npmrc ./ 2>/dev/null || true
 
-# Copy all packages
+# Copy all workspace packages
 COPY packages ./packages
 COPY apps/api ./apps/api
 
-# Install dependencies
+# ================================
+# Dependencies Stage
+# ================================
+FROM base AS dependencies
+
+# Install all dependencies (including dev)
 RUN pnpm install --frozen-lockfile
 
-# Generate Prisma Client
-RUN pnpm --filter @retail/database db:generate
+# ================================
+# Build Stage
+# ================================
+FROM dependencies AS build
 
-# Build the API
+# Build shared packages first
+RUN pnpm --filter @retail/database build
+RUN pnpm --filter @retail/types build
+
+# Build API
 RUN pnpm --filter @retail/api build
 
-# Production stage
-FROM node:20-alpine
+# Generate Prisma Client
+RUN pnpm --filter @retail/database prisma generate
 
-# Install pnpm
-RUN npm install -g pnpm
+# ================================
+# Production Dependencies
+# ================================
+FROM base AS prod-dependencies
+
+# Install only production dependencies
+RUN pnpm install --frozen-lockfile --prod
+
+# ================================
+# Production Stage
+# ================================
+FROM node:20-alpine AS production
+
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init curl
 
 WORKDIR /app
 
-# Copy built application
-COPY --from=builder /app/apps/api/dist ./dist
-COPY --from=builder /app/apps/api/package.json ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/packages ./packages
-
-# Create logs directory
-RUN mkdir -p logs
-
 # Create non-root user
-RUN addgroup -g 1001 -S nodejs && adduser -S nestjs -u 1001
-RUN chown -R nestjs:nodejs /app
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
 
-# Switch to non-root user
-USER nestjs
+# Copy production dependencies
+COPY --from=prod-dependencies --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=prod-dependencies --chown=nodejs:nodejs /app/packages ./packages
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3001/health/liveness', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})" || exit 1
+# Copy built application
+COPY --from=build --chown=nodejs:nodejs /app/apps/api/dist ./apps/api/dist
+COPY --from=build --chown=nodejs:nodejs /app/apps/api/package.json ./apps/api/
+
+# Copy Prisma schema and migrations
+COPY --from=build --chown=nodejs:nodejs /app/packages/database/prisma ./packages/database/prisma
+
+# Create uploads directory
+RUN mkdir -p /app/uploads && chown -R nodejs:nodejs /app/uploads
+
+USER nodejs
 
 EXPOSE 3001
 
-CMD ["node", "dist/main.js"]
+ENV NODE_ENV=production
+ENV PORT=3001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
+
+# Run migrations and start app
+CMD ["sh", "-c", "pnpm --filter @retail/database prisma migrate deploy && node apps/api/dist/main.js"]

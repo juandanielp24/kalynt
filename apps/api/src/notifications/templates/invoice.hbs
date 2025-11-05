@@ -1,0 +1,85 @@
+<h2>Factura {{invoiceNumber}}</h2>
+
+<p>Hola {{customerName}},</p>
+
+<p>
+  Gracias por tu compra. Adjuntamos tu factura electrónica.
+</p>
+
+<div style="background-color: #f8f8f8; padding: 20px; border-radius: 8px; margin: 20px 0;">
+  <h3 style="margin-top: 0;">Detalles de la Factura</h3>
+
+  <table style="width: 100%; border-collapse: collapse;">
+    <tr>
+      <td style="padding: 8px 0;"><strong>Número:</strong></td>
+      <td style="text-align: right;">{{invoiceNumber}}</td>
+    </tr>
+    <tr>
+      <td style="padding: 8px 0;"><strong>Fecha:</strong></td>
+      <td style="text-align: right;">{{saleDate}}</td>
+    </tr>
+    {{#if cae}}
+    <tr>
+      <td style="padding: 8px 0;"><strong>CAE:</strong></td>
+      <td style="text-align: right; font-family: monospace;">{{cae}}</td>
+    </tr>
+    {{/if}}
+  </table>
+</div>
+
+<h3>Productos</h3>
+<table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+  <thead>
+    <tr style="border-bottom: 2px solid #e0e0e0;">
+      <th style="padding: 12px 0; text-align: left;">Producto</th>
+      <th style="padding: 12px 0; text-align: center;">Cant.</th>
+      <th style="padding: 12px 0; text-align: right;">Precio</th>
+      <th style="padding: 12px 0; text-align: right;">Total</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#each items}}
+    <tr style="border-bottom: 1px solid #f0f0f0;">
+      <td style="padding: 12px 0;">{{this.productName}}</td>
+      <td style="padding: 12px 0; text-align: center;">{{this.quantity}}</td>
+      <td style="padding: 12px 0; text-align: right;">${{this.unitPriceCents}}</td>
+      <td style="padding: 12px 0; text-align: right;">${{this.totalCents}}</td>
+    </tr>
+    {{/each}}
+  </tbody>
+</table>
+
+<table style="width: 100%; margin-top: 20px;">
+  <tr>
+    <td style="padding: 8px 0; text-align: right;"><strong>Subtotal:</strong></td>
+    <td style="padding: 8px 0; text-align: right; width: 120px;">${{subtotal}}</td>
+  </tr>
+  <tr>
+    <td style="padding: 8px 0; text-align: right;">IVA (21%):</td>
+    <td style="padding: 8px 0; text-align: right;">${{tax}}</td>
+  </tr>
+  <tr style="border-top: 2px solid #e0e0e0;">
+    <td style="padding: 12px 0; text-align: right; font-size: 18px;"><strong>Total:</strong></td>
+    <td style="padding: 12px 0; text-align: right; font-size: 18px; color: #6200ee;"><strong>${{total}}</strong></td>
+  </tr>
+</table>
+
+<div class="divider"></div>
+
+<div style="background-color: #e8f5e9; padding: 15px; border-radius: 8px; margin: 20px 0;">
+  <p style="margin: 0; color: #2e7d32;">
+    ✓ <strong>Factura válida con CAE de AFIP</strong>
+  </p>
+</div>
+
+<p>
+  <strong>{{tenant.name}}</strong><br>
+  {{#if tenant.address}}{{tenant.address}}<br>{{/if}}
+  {{#if tenant.cuit}}CUIT: {{tenant.cuit}}<br>{{/if}}
+  {{#if tenant.phone}}Tel: {{tenant.phone}}{{/if}}
+</p>
+
+<p style="color: #666; font-size: 14px;">
+  Este comprobante ha sido generado electrónicamente y posee validez fiscal
+  según normativa vigente de AFIP.
+</p>

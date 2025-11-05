@@ -15,6 +15,10 @@ export * from './components/ui/avatar';
 export * from './components/ui/skeleton';
 export * from './components/ui/alert';
 export * from './components/ui/separator';
+export * from './components/ui/popover';
+export * from './components/ui/scroll-area';
+export * from './components/ui/switch';
+export * from './components/ui/textarea';
 
 // Custom components
 export * from './components/currency-input';

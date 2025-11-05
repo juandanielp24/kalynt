@@ -1,6 +1,7 @@
 import { Injectable, Inject, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaClient } from '@retail/database';
 import { AFIPService } from '@retail/ar';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { CreateSaleDto, CompleteSaleDto, QuerySalesDto } from './dto';
 
 @Injectable()
@@ -10,6 +11,7 @@ export class SalesService {
   constructor(
     @Inject('PRISMA') private prisma: PrismaClient,
     private afipService: AFIPService,
+    private eventEmitter: EventEmitter2,
     @Inject('NOTIFICATIONS_SERVICE') private notificationsService?: any
   ) {}
 
@@ -181,6 +183,9 @@ export class SalesService {
       },
     });
 
+    // Emit event for WhatsApp payment confirmation
+    this.eventEmitter.emit('payment.received', { saleId });
+
     // 2. Determinar tipo de factura según condición fiscal
     const invoiceType = this.determineInvoiceType(
       sale.tenant.fiscalCondition!,
@@ -237,6 +242,9 @@ export class SalesService {
       });
 
       this.logger.log(`Sale completed successfully. CAE: ${afipResponse.cae}`);
+
+      // Emit event for WhatsApp notification
+      this.eventEmitter.emit('sale.created', { saleId: completedSale.id });
 
       // Enviar recibo por email si está disponible el servicio de notificaciones
       if (this.notificationsService && sale.customerEmail) {

@@ -1,11 +1,18 @@
 import { PrismaClient } from '@prisma/client';
+import { seedRBAC } from './seeds/rbac.seed';
+import { seedLocations } from './seeds/locations.seed';
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Seeding database...');
 
-  // Crear tenant de prueba
+  // 1. Seed RBAC system first (permissions and system roles)
+  await seedRBAC();
+
+  console.log('\n📦 Seeding demo data...\n');
+
+  // 2. Crear tenant de prueba
   const tenant = await prisma.tenant.upsert({
     where: { slug: 'demo' },
     update: {},
@@ -23,7 +30,19 @@ async function main() {
 
   console.log('✅ Tenant creado:', tenant.slug);
 
-  // Crear usuario owner
+  // Obtener el rol Owner del sistema
+  const ownerRole = await prisma.role.findFirst({
+    where: {
+      name: 'Owner',
+      isSystem: true,
+    },
+  });
+
+  if (!ownerRole) {
+    throw new Error('Owner role not found. Make sure RBAC seed ran successfully.');
+  }
+
+  // Crear usuario owner con rol RBAC
   const owner = await prisma.user.upsert({
     where: {
       tenantId_email: {
@@ -31,32 +50,25 @@ async function main() {
         email: 'owner@demo.com'
       }
     },
-    update: {},
+    update: {
+      roleId: ownerRole.id,
+    },
     create: {
       tenantId: tenant.id,
       email: 'owner@demo.com',
       name: 'Demo Owner',
-      role: 'owner',
+      role: 'owner', // Deprecated field for backward compatibility
+      roleId: ownerRole.id, // New RBAC role
       emailVerified: true,
     },
   });
 
   console.log('✅ Usuario owner creado:', owner.email);
+  console.log('✅ Rol asignado:', ownerRole.name);
 
-  // Crear ubicación
-  const location = await prisma.location.create({
-    data: {
-      tenantId: tenant.id,
-      name: 'Sucursal Principal',
-      type: 'store',
-      address: 'Av. Corrientes 1234',
-      city: 'CABA',
-      province: 'Buenos Aires',
-      isActive: true,
-    },
-  });
-
-  console.log('✅ Ubicación creada:', location.name);
+  // Crear ubicaciones con el nuevo sistema multi-sucursales
+  const locations = await seedLocations(tenant.id, owner.id);
+  const location = locations[0]; // Usar la primera ubicación para el stock
 
   // Crear categorías
   const categories = await Promise.all([

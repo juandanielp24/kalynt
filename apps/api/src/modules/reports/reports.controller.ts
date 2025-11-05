@@ -7,19 +7,27 @@ import {
   ValidationPipe,
   Headers,
 } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { Response } from 'express';
 import { ReportsService } from './reports.service';
 import { GenerateReportDto } from './dto/generate-report.dto';
 import { AuthGuard } from '@/common/guards/auth.guard';
 import { TenantGuard } from '@/common/guards/tenant.guard';
 import { ReportOptions } from './report.types';
+import { RequirePermission } from '@/rbac/decorators/require-permission.decorator';
+import { AuditLog } from '@/rbac/interceptors/audit-log.interceptor';
+import { PermissionResource, PermissionAction } from '@prisma/client';
 
+@ApiTags('Reports')
 @Controller('reports')
 @UseGuards(AuthGuard, TenantGuard)
+@ApiBearerAuth()
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 
   @Get('generate')
+  @RequirePermission(PermissionResource.REPORTS, PermissionAction.READ)
+  @AuditLog({ action: 'EXECUTE', entity: 'REPORT', description: 'Generated report' })
   async generateReport(
     @Query(new ValidationPipe({ transform: true })) dto: GenerateReportDto,
     @Headers('x-tenant-id') tenantId: string,
@@ -51,6 +59,8 @@ export class ReportsController {
   }
 
   @Get('sales')
+  @RequirePermission(PermissionResource.REPORTS, PermissionAction.READ)
+  @AuditLog({ action: 'EXECUTE', entity: 'REPORT', description: 'Generated sales report' })
   async salesReport(
     @Query('format') format: string = 'excel',
     @Query('startDate') startDate?: string,
@@ -72,6 +82,8 @@ export class ReportsController {
   }
 
   @Get('inventory')
+  @RequirePermission(PermissionResource.REPORTS, PermissionAction.READ)
+  @AuditLog({ action: 'EXECUTE', entity: 'REPORT', description: 'Generated inventory report' })
   async inventoryReport(
     @Query('format') format: string = 'excel',
     @Query('locationId') locationId?: string,
@@ -91,6 +103,8 @@ export class ReportsController {
   }
 
   @Get('financial')
+  @RequirePermission(PermissionResource.REPORTS, PermissionAction.READ)
+  @AuditLog({ action: 'EXECUTE', entity: 'REPORT', description: 'Generated financial report' })
   async financialReport(
     @Query('format') format: string = 'excel',
     @Query('startDate') startDate?: string,
@@ -110,6 +124,8 @@ export class ReportsController {
   }
 
   @Get('products')
+  @RequirePermission(PermissionResource.REPORTS, PermissionAction.READ)
+  @AuditLog({ action: 'EXECUTE', entity: 'REPORT', description: 'Generated products report' })
   async productsReport(
     @Query('format') format: string = 'excel',
     @Query('startDate') startDate?: string,
@@ -131,6 +147,8 @@ export class ReportsController {
   }
 
   @Get('customers')
+  @RequirePermission(PermissionResource.REPORTS, PermissionAction.READ)
+  @AuditLog({ action: 'EXECUTE', entity: 'REPORT', description: 'Generated customers report' })
   async customersReport(
     @Query('format') format: string = 'excel',
     @Query('startDate') startDate?: string,
@@ -150,6 +168,8 @@ export class ReportsController {
   }
 
   @Get('tax')
+  @RequirePermission(PermissionResource.REPORTS, PermissionAction.READ)
+  @AuditLog({ action: 'EXECUTE', entity: 'REPORT', description: 'Generated tax report' })
   async taxReport(
     @Query('format') format: string = 'excel',
     @Query('startDate') startDate?: string,

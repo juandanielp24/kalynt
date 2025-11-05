@@ -56,6 +56,14 @@ export const productsApi = {
   },
 
   /**
+   * Get all products (alias for findAll)
+   * GET /products
+   */
+  async getProducts(query?: QueryProductsDto): Promise<PaginatedProductsResponse> {
+    return apiClient.get<PaginatedProductsResponse>('/products', { params: query as any });
+  },
+
+  /**
    * Get a single product by ID
    * GET /products/:id
    */

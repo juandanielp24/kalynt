@@ -17,16 +17,23 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ProductsService } from './products.service';
 import { CreateProductDto, UpdateProductDto, ProductQueryDto, BulkUpdatePricesDto } from './dto';
 import { TenantGuard } from '@/common/guards/tenant.guard';
+import { RequirePermission } from '@/rbac/decorators/require-permission.decorator';
+import { AuditLog } from '@/rbac/interceptors/audit-log.interceptor';
+import { PermissionResource, PermissionAction } from '@prisma/client';
 
+@ApiTags('Products')
 @Controller('products')
 @UseGuards(TenantGuard)
+@ApiBearerAuth()
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Get()
+  @RequirePermission(PermissionResource.PRODUCTS, PermissionAction.READ)
   async findAll(
     @Headers('x-tenant-id') tenantId: string,
     @Query() query: ProductQueryDto
@@ -36,6 +43,8 @@ export class ProductsController {
 
   // Specific routes must come before parameterized routes
   @Get('export')
+  @RequirePermission(PermissionResource.PRODUCTS, PermissionAction.READ)
+  @AuditLog({ action: 'EXECUTE', entity: 'PRODUCT', description: 'Exported products to Excel' })
   async exportProducts(
     @Headers('x-tenant-id') tenantId: string,
     @Query() filters: any,
@@ -55,6 +64,7 @@ export class ProductsController {
   }
 
   @Get('barcode/:barcode')
+  @RequirePermission(PermissionResource.PRODUCTS, PermissionAction.READ)
   async findByBarcode(
     @Headers('x-tenant-id') tenantId: string,
     @Param('barcode') barcode: string
@@ -63,6 +73,7 @@ export class ProductsController {
   }
 
   @Get(':id')
+  @RequirePermission(PermissionResource.PRODUCTS, PermissionAction.READ)
   async findOne(
     @Headers('x-tenant-id') tenantId: string,
     @Param('id') id: string
@@ -71,6 +82,7 @@ export class ProductsController {
   }
 
   @Get(':id/stock')
+  @RequirePermission(PermissionResource.STOCK, PermissionAction.READ)
   async getStock(
     @Headers('x-tenant-id') tenantId: string,
     @Param('id') id: string
@@ -79,6 +91,8 @@ export class ProductsController {
   }
 
   @Post()
+  @RequirePermission(PermissionResource.PRODUCTS, PermissionAction.CREATE)
+  @AuditLog({ action: 'CREATE', entity: 'PRODUCT', description: 'Created new product' })
   async create(
     @Headers('x-tenant-id') tenantId: string,
     @Body() createDto: CreateProductDto
@@ -87,6 +101,8 @@ export class ProductsController {
   }
 
   @Post('bulk-update-prices')
+  @RequirePermission(PermissionResource.PRODUCTS, PermissionAction.UPDATE)
+  @AuditLog({ action: 'UPDATE', entity: 'PRODUCT', description: 'Bulk updated product prices' })
   async bulkUpdatePrices(
     @Headers('x-tenant-id') tenantId: string,
     @Body() dto: BulkUpdatePricesDto
@@ -95,6 +111,8 @@ export class ProductsController {
   }
 
   @Post('import')
+  @RequirePermission(PermissionResource.PRODUCTS, PermissionAction.CREATE)
+  @AuditLog({ action: 'CREATE', entity: 'PRODUCT', description: 'Imported products from Excel' })
   @UseInterceptors(FileInterceptor('file'))
   async importProducts(
     @Headers('x-tenant-id') tenantId: string,
@@ -112,6 +130,8 @@ export class ProductsController {
   }
 
   @Post(':id/duplicate')
+  @RequirePermission(PermissionResource.PRODUCTS, PermissionAction.CREATE)
+  @AuditLog({ action: 'CREATE', entity: 'PRODUCT', description: 'Duplicated product' })
   async duplicateProduct(
     @Headers('x-tenant-id') tenantId: string,
     @Param('id') id: string
@@ -120,6 +140,8 @@ export class ProductsController {
   }
 
   @Put(':id')
+  @RequirePermission(PermissionResource.PRODUCTS, PermissionAction.UPDATE)
+  @AuditLog({ action: 'UPDATE', entity: 'PRODUCT', description: 'Updated product' })
   async update(
     @Headers('x-tenant-id') tenantId: string,
     @Param('id') id: string,
@@ -129,6 +151,8 @@ export class ProductsController {
   }
 
   @Patch(':id/toggle-active')
+  @RequirePermission(PermissionResource.PRODUCTS, PermissionAction.UPDATE)
+  @AuditLog({ action: 'UPDATE', entity: 'PRODUCT', description: 'Toggled product active status' })
   async toggleActive(
     @Headers('x-tenant-id') tenantId: string,
     @Param('id') id: string
@@ -137,6 +161,8 @@ export class ProductsController {
   }
 
   @Delete(':id')
+  @RequirePermission(PermissionResource.PRODUCTS, PermissionAction.DELETE)
+  @AuditLog({ action: 'DELETE', entity: 'PRODUCT', description: 'Deleted product' })
   async remove(
     @Headers('x-tenant-id') tenantId: string,
     @Param('id') id: string

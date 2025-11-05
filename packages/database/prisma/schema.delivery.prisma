@@ -1,0 +1,281 @@
+// ============================================
+// DELIVERY SYSTEM - ENUMS
+// ============================================
+
+enum VehicleType {
+  MOTORCYCLE
+  CAR
+  BICYCLE
+  VAN
+  TRUCK
+  WALKING
+}
+
+enum DriverStatus {
+  AVAILABLE   // Disponible para nuevos pedidos
+  BUSY        // En delivery
+  OFFLINE     // No disponible
+  BREAK       // En descanso
+}
+
+enum DeliveryStatus {
+  PENDING           // Pendiente de asignación
+  ASSIGNED          // Asignado a repartidor
+  PICKED_UP         // Recogido por repartidor
+  IN_TRANSIT        // En camino
+  ARRIVED           // Llegó al destino
+  DELIVERED         // Entregado
+  FAILED            // Falló la entrega
+  CANCELLED         // Cancelado
+  RETURNED          // Devuelto al origen
+}
+
+// ============================================
+// DELIVERY ZONES (Zonas de Cobertura)
+// ============================================
+
+model DeliveryZone {
+  id              String   @id @default(cuid())
+  tenantId        String   @map("tenant_id")
+
+  // Zone Info
+  name            String
+  description     String?  @db.Text
+
+  // Coverage Area (simplified - could use PostGIS for production)
+  postalCodes     Json?    @map("postal_codes") // Array of postal codes
+  neighborhoods   Json?    // Array of neighborhood names
+
+  // Costs
+  baseCost        Float    @default(0) @map("base_cost")
+  costPerKm       Float    @default(0) @map("cost_per_km")
+  freeDeliveryMin Float?   @map("free_delivery_min") // Minimum order for free delivery
+
+  // Timing
+  estimatedMinutes Int     @default(60) @map("estimated_minutes")
+  maxDeliveryTime  Int     @default(120) @map("max_delivery_time") // minutes
+
+  // Status
+  isActive        Boolean  @default(true) @map("is_active")
+  priority        Int      @default(0) // For zone selection order
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deliveries      Delivery[]
+
+  @@index([tenantId, isActive])
+  @@map("delivery_zones")
+}
+
+// ============================================
+// DRIVERS (Repartidores)
+// ============================================
+
+model Driver {
+  id              String   @id @default(cuid())
+  tenantId        String   @map("tenant_id")
+
+  // Personal Info
+  firstName       String   @map("first_name")
+  lastName        String   @map("last_name")
+  phone           String
+  email           String?
+
+  // Identification
+  documentType    String?  @map("document_type") // DNI, Passport, etc.
+  documentNumber  String?  @map("document_number")
+
+  // Vehicle Info
+  vehicleType     VehicleType @map("vehicle_type")
+  vehiclePlate    String?  @map("vehicle_plate")
+  vehicleModel    String?  @map("vehicle_model")
+
+  // Status
+  status          DriverStatus @default(OFFLINE)
+  isActive        Boolean  @default(true) @map("is_active")
+
+  // Current Location (simplified)
+  currentLat      Float?   @map("current_lat")
+  currentLng      Float?   @map("current_lng")
+  lastLocationUpdate DateTime? @map("last_location_update")
+
+  // Ratings
+  rating          Float?   @default(5.0)
+  totalDeliveries Int      @default(0) @map("total_deliveries")
+
+  // Login credentials (if drivers have app access)
+  userId          String?  @unique @map("user_id")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user            User?    @relation(fields: [userId], references: [id])
+  deliveries      Delivery[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, isActive])
+  @@map("drivers")
+}
+
+// ============================================
+// DELIVERIES
+// ============================================
+
+model Delivery {
+  id              String   @id @default(cuid())
+  tenantId        String   @map("tenant_id")
+
+  // Delivery Number
+  deliveryNumber  String   @unique @map("delivery_number")
+
+  // Related Order
+  saleId          String   @unique @map("sale_id")
+
+  // Driver Assignment
+  driverId        String?  @map("driver_id")
+  assignedAt      DateTime? @map("assigned_at")
+
+  // Zone
+  zoneId          String?  @map("zone_id")
+
+  // Delivery Address
+  address         String   @db.Text
+  addressLine2    String?  @map("address_line_2") @db.Text
+  city            String
+  state           String
+  postalCode      String?  @map("postal_code")
+  country         String   @default("Argentina")
+
+  // Coordinates (optional)
+  latitude        Float?
+  longitude       Float?
+
+  // Contact
+  contactName     String   @map("contact_name")
+  contactPhone    String   @map("contact_phone")
+  deliveryNotes   String?  @map("delivery_notes") @db.Text
+
+  // Costs
+  deliveryCost    Float    @default(0) @map("delivery_cost")
+  distance        Float?   // in kilometers
+
+  // Status
+  status          DeliveryStatus @default(PENDING)
+
+  // Timing
+  scheduledFor    DateTime? @map("scheduled_for")
+  estimatedArrival DateTime? @map("estimated_arrival")
+
+  pickedUpAt      DateTime? @map("picked_up_at")
+  deliveredAt     DateTime? @map("delivered_at")
+  cancelledAt     DateTime? @map("cancelled_at")
+
+  // Proof of Delivery
+  signatureUrl    String?  @map("signature_url")
+  photoUrl        String?  @map("photo_url")
+  recipientName   String?  @map("recipient_name")
+
+  // Rating
+  rating          Int?     // 1-5 stars
+  feedback        String?  @db.Text
+
+  // Cancellation
+  cancellationReason String? @map("cancellation_reason") @db.Text
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sale            Sale     @relation(fields: [saleId], references: [id])
+  driver          Driver?  @relation(fields: [driverId], references: [id])
+  zone            DeliveryZone? @relation(fields: [zoneId], references: [id])
+  statusHistory   DeliveryStatusHistory[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, driverId])
+  @@index([saleId])
+  @@index([deliveryNumber])
+  @@map("deliveries")
+}
+
+// ============================================
+// DELIVERY STATUS HISTORY
+// ============================================
+
+model DeliveryStatusHistory {
+  id              String   @id @default(cuid())
+  deliveryId      String   @map("delivery_id")
+
+  // Status Change
+  fromStatus      DeliveryStatus? @map("from_status")
+  toStatus        DeliveryStatus  @map("to_status")
+
+  // Location at time of change
+  latitude        Float?
+  longitude       Float?
+
+  // Notes
+  notes           String?  @db.Text
+
+  // Who made the change
+  changedBy       String?  @map("changed_by") // User or Driver ID
+  changedByType   String?  @map("changed_by_type") // 'user' or 'driver'
+
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  // Relations
+  delivery        Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+
+  @@index([deliveryId])
+  @@index([createdAt])
+  @@map("delivery_status_history")
+}
+
+// ============================================
+// DELIVERY SETTINGS
+// ============================================
+
+model DeliverySettings {
+  id              String   @id @default(cuid())
+  tenantId        String   @unique @map("tenant_id")
+
+  // General Settings
+  enableDelivery  Boolean  @default(true) @map("enable_delivery")
+  autoAssign      Boolean  @default(false) @map("auto_assign") // Auto-assign to available drivers
+
+  // Default Costs
+  defaultBaseCost Float    @default(0) @map("default_base_cost")
+  defaultCostPerKm Float   @default(0) @map("default_cost_per_km")
+
+  // Free Delivery
+  freeDeliveryEnabled Boolean @default(false) @map("free_delivery_enabled")
+  freeDeliveryMinAmount Float? @map("free_delivery_min_amount")
+
+  // Timing
+  defaultEstimatedTime Int  @default(60) @map("default_estimated_time") // minutes
+  bufferTime           Int  @default(15) @map("buffer_time") // Additional buffer minutes
+
+  // Working Hours
+  workingHoursStart String? @map("working_hours_start") // "09:00"
+  workingHoursEnd   String? @map("working_hours_end")   // "22:00"
+
+  // Notifications
+  notifyCustomerOnAssign    Boolean @default(true) @map("notify_customer_on_assign")
+  notifyCustomerOnPickup    Boolean @default(true) @map("notify_customer_on_pickup")
+  notifyCustomerOnArrival   Boolean @default(true) @map("notify_customer_on_arrival")
+  notifyCustomerOnDelivery  Boolean @default(true) @map("notify_customer_on_delivery")
+
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  tenant          Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("delivery_settings")
+}

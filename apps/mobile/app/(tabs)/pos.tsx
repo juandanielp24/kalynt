@@ -1,241 +1,125 @@
-import { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  FlatList,
-  ScrollView,
-  StyleSheet,
-  ActivityIndicator,
-} from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, FlatList } from 'react-native';
+import { Text, FAB, Portal, Dialog, Button } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useCartStore } from '@/store/cart-store';
-
-// Mock types - should import from shared lib
-interface Product {
-  id: string;
-  name: string;
-  sku: string;
-  priceCents: number;
-  taxRate: number;
-  stock?: Array<{
-    quantity: number;
-  }>;
-  category?: {
-    name: string;
-  };
-}
+import { ProductSearchBar } from '../../src/components/pos/ProductSearchBar';
+import { ProductCard } from '../../src/components/pos/ProductCard';
+import { CartSummary } from '../../src/components/pos/CartSummary';
+import { CheckoutModal } from '../../src/components/pos/CheckoutModal';
+import { SyncIndicator } from '../../src/components/SyncIndicator';
+import { usePOSMobileStore } from '../../store/pos-mobile-store';
+import { useProducts } from '../../src/hooks/use-products';
 
 export default function POSScreen() {
-  const cart = useCartStore();
-  const [products, setProducts] = useState<Product[]>([]);
+  const { items, totalCents, removeItem, updateQuantity } = usePOSMobileStore();
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [showCheckout, setShowCheckout] = useState(false);
+  const [isCheckoutVisible, setIsCheckoutVisible] = useState(false);
+  const [isCartVisible, setIsCartVisible] = useState(false);
 
-  // Mock product loading - should use API client
-  useEffect(() => {
-    loadProducts();
-  }, []);
+  const { products, isLoading } = useProducts(searchQuery);
 
-  const loadProducts = async () => {
-    setIsLoading(true);
-    try {
-      // TODO: Replace with actual API call
-      // const response = await productsApi.findAll({ inStock: true });
-      // setProducts(response.data);
-      setProducts([]);
-    } catch (error) {
-      console.error('Error loading products:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const formatCurrency = (cents: number) => {
-    const amount = cents / 100;
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-    }).format(amount);
-  };
-
-  const handleAddToCart = (product: Product) => {
-    cart.addItem({
-      productId: product.id,
-      productName: product.name,
-      sku: product.sku,
-      unitPriceCents: product.priceCents,
-      taxRate: product.taxRate,
-    });
-  };
-
-  const renderProductItem = ({ item }: { item: Product }) => {
-    const stockQuantity = item.stock?.[0]?.quantity || 0;
-    const inStock = stockQuantity > 0;
-
-    return (
-      <TouchableOpacity
-        style={[styles.productCard, !inStock && styles.productCardDisabled]}
-        onPress={() => inStock && handleAddToCart(item)}
-        disabled={!inStock}
-      >
-        <View style={styles.productInfo}>
-          <Text style={styles.productName}>{item.name}</Text>
-          <Text style={styles.productSku}>{item.sku}</Text>
-          {item.category && (
-            <Text style={styles.productCategory}>{item.category.name}</Text>
-          )}
-        </View>
-        <View style={styles.productDetails}>
-          <Text style={styles.productPrice}>
-            {formatCurrency(item.priceCents)}
-          </Text>
-          <Text style={styles.productTax}>
-            + IVA {(item.taxRate * 100).toFixed(1)}%
-          </Text>
-          <Text
-            style={[
-              styles.productStock,
-              !inStock && styles.productStockOut,
-              stockQuantity <= 5 && stockQuantity > 0 && styles.productStockLow,
-            ]}
-          >
-            {inStock ? `Stock: ${stockQuantity}` : 'Sin stock'}
-          </Text>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
-  const renderCartItem = (item: typeof cart.items[0]) => {
-    const itemTotal =
-      item.unitPriceCents * item.quantity +
-      Math.round(item.unitPriceCents * item.quantity * item.taxRate) -
-      (item.discountCents || 0);
-
-    return (
-      <View key={item.productId} style={styles.cartItem}>
-        <View style={styles.cartItemInfo}>
-          <Text style={styles.cartItemName}>{item.productName}</Text>
-          <Text style={styles.cartItemSku}>{item.sku}</Text>
-        </View>
-        <View style={styles.cartItemControls}>
-          <View style={styles.quantityControls}>
-            <TouchableOpacity
-              style={styles.quantityButton}
-              onPress={() => cart.updateQuantity(item.productId, item.quantity - 1)}
-            >
-              <Text style={styles.quantityButtonText}>-</Text>
-            </TouchableOpacity>
-            <Text style={styles.quantity}>{item.quantity}</Text>
-            <TouchableOpacity
-              style={styles.quantityButton}
-              onPress={() => cart.updateQuantity(item.productId, item.quantity + 1)}
-            >
-              <Text style={styles.quantityButtonText}>+</Text>
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.cartItemPrice}>{formatCurrency(itemTotal)}</Text>
-        </View>
-      </View>
-    );
-  };
+  const hasItems = items.length > 0;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text variant="headlineMedium" style={styles.title}>
+          Punto de Venta
+        </Text>
+        <SyncIndicator />
+      </View>
+
       {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Buscar productos..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
+      <ProductSearchBar value={searchQuery} onChangeText={setSearchQuery} />
 
-      {/* Main Content */}
-      <View style={styles.content}>
-        {/* Products Grid */}
-        <View style={styles.productsSection}>
-          {isLoading ? (
-            <ActivityIndicator size="large" style={styles.loader} />
-          ) : (
-            <FlatList
-              data={products}
-              renderItem={renderProductItem}
-              keyExtractor={(item) => item.id}
-              numColumns={2}
-              contentContainerStyle={styles.productsList}
-              ListEmptyComponent={
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyStateText}>No hay productos disponibles</Text>
-                </View>
-              }
-            />
-          )}
-        </View>
-
-        {/* Cart Section */}
-        <View style={styles.cartSection}>
-          <View style={styles.cartHeader}>
-            <Text style={styles.cartTitle}>Carrito</Text>
-            <Text style={styles.cartItemCount}>
-              {cart.getItemCount()} {cart.getItemCount() === 1 ? 'item' : 'items'}
-            </Text>
-          </View>
-
-          <ScrollView style={styles.cartItems}>
-            {cart.items.length === 0 ? (
-              <Text style={styles.emptyCart}>Carrito vacío</Text>
+      {/* Product List */}
+      <FlatList
+        data={products}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => <ProductCard product={item} />}
+        contentContainerStyle={styles.listContent}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            {isLoading ? (
+              <Text>Buscando productos...</Text>
+            ) : searchQuery ? (
+              <Text>No se encontraron productos</Text>
             ) : (
-              cart.items.map(renderCartItem)
+              <Text>Busca productos para comenzar</Text>
             )}
-          </ScrollView>
-
-          {/* Totals */}
-          <View style={styles.totalsSection}>
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Subtotal</Text>
-              <Text style={styles.totalValue}>
-                {formatCurrency(cart.getSubtotalCents())}
-              </Text>
-            </View>
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>IVA</Text>
-              <Text style={styles.totalValue}>
-                {formatCurrency(cart.getTaxCents())}
-              </Text>
-            </View>
-            <View style={[styles.totalRow, styles.totalRowFinal]}>
-              <Text style={styles.totalLabelFinal}>Total</Text>
-              <Text style={styles.totalValueFinal}>
-                {formatCurrency(cart.getTotalCents())}
-              </Text>
-            </View>
           </View>
+        }
+      />
 
-          {/* Action Buttons */}
-          <View style={styles.actions}>
-            <TouchableOpacity
-              style={[styles.button, styles.buttonPrimary]}
-              disabled={cart.items.length === 0}
-              onPress={() => setShowCheckout(true)}
+      {/* Cart Summary Bottom Bar */}
+      {hasItems && (
+        <CartSummary
+          itemCount={items.length}
+          total={totalCents}
+          onPress={() => setIsCartVisible(true)}
+        />
+      )}
+
+      {/* Floating Action Buttons */}
+      <Portal>
+        <FAB.Group
+          open={false}
+          visible
+          icon="cart"
+          actions={[
+            {
+              icon: 'cart',
+              label: 'Ver Carrito',
+              onPress: () => setIsCartVisible(true),
+              disabled: !hasItems,
+            },
+            {
+              icon: 'cash-register',
+              label: 'Cobrar',
+              onPress: () => setIsCheckoutVisible(true),
+              disabled: !hasItems,
+            },
+          ]}
+          onStateChange={() => {}}
+        />
+      </Portal>
+
+      {/* Cart Dialog */}
+      <Portal>
+        <Dialog
+          visible={isCartVisible}
+          onDismiss={() => setIsCartVisible(false)}
+          style={styles.cartDialog}
+        >
+          <Dialog.Title>Carrito</Dialog.Title>
+          <Dialog.Content>
+            <CartItems
+              items={items}
+              removeItem={removeItem}
+              updateQuantity={updateQuantity}
+            />
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setIsCartVisible(false)}>Cerrar</Button>
+            <Button
+              mode="contained"
+              onPress={() => {
+                setIsCartVisible(false);
+                setIsCheckoutVisible(true);
+              }}
             >
-              <Text style={styles.buttonTextPrimary}>Procesar Venta</Text>
-            </TouchableOpacity>
-            {cart.items.length > 0 && (
-              <TouchableOpacity
-                style={[styles.button, styles.buttonOutline]}
-                onPress={() => cart.clearCart()}
-              >
-                <Text style={styles.buttonTextOutline}>Limpiar Carrito</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-      </View>
+              Procesar Venta
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
+
+      {/* Checkout Modal */}
+      <CheckoutModal
+        visible={isCheckoutVisible}
+        onDismiss={() => setIsCheckoutVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -245,238 +129,101 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  searchContainer: {
-    padding: 16,
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
-  searchInput: {
-    height: 44,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 16,
+  title: {
+    fontWeight: 'bold',
   },
-  content: {
-    flex: 1,
-    flexDirection: 'row',
-  },
-  productsSection: {
-    flex: 2,
+  listContent: {
     padding: 16,
-  },
-  productsList: {
-    gap: 12,
-  },
-  productCard: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    margin: 6,
-    minHeight: 160,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  productCardDisabled: {
-    opacity: 0.5,
-  },
-  productInfo: {
-    marginBottom: 8,
-  },
-  productName: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  productSku: {
-    fontSize: 12,
-    color: '#666',
-  },
-  productCategory: {
-    fontSize: 11,
-    color: '#888',
-    marginTop: 4,
-  },
-  productDetails: {
-    marginTop: 'auto',
-  },
-  productPrice: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 2,
-  },
-  productTax: {
-    fontSize: 11,
-    color: '#666',
-    marginBottom: 4,
-  },
-  productStock: {
-    fontSize: 12,
-    color: '#22c55e',
-    fontWeight: '500',
-  },
-  productStockLow: {
-    color: '#f97316',
-  },
-  productStockOut: {
-    color: '#ef4444',
-  },
-  loader: {
-    marginTop: 40,
   },
   emptyState: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  emptyStateText: {
-    fontSize: 16,
-    color: '#666',
-  },
-  cartSection: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderLeftWidth: 1,
-    borderLeftColor: '#e0e0e0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
   },
-  cartHeader: {
+  cartDialog: {
+    maxHeight: '80%',
+  },
+  cartItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
-  cartTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  cartItemCount: {
-    fontSize: 14,
-    color: '#666',
-  },
-  cartItems: {
-    flex: 1,
-    padding: 16,
-  },
-  emptyCart: {
-    textAlign: 'center',
-    color: '#999',
-    marginTop: 40,
-  },
-  cartItem: {
-    marginBottom: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
   cartItemInfo: {
-    marginBottom: 8,
+    flex: 1,
   },
-  cartItemName: {
-    fontSize: 15,
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  cartItemSku: {
-    fontSize: 12,
-    color: '#666',
-  },
-  cartItemControls: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  quantityControls: {
+  cartItemActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-  },
-  quantityButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  quantityButtonText: {
-    fontSize: 18,
-    fontWeight: '600',
+    gap: 8,
   },
   quantity: {
-    fontSize: 16,
-    fontWeight: '500',
-    minWidth: 24,
+    minWidth: 30,
     textAlign: 'center',
+    fontWeight: 'bold',
   },
-  cartItemPrice: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  totalsSection: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  totalLabel: {
-    fontSize: 14,
-    color: '#666',
-  },
-  totalValue: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  totalRowFinal: {
-    marginTop: 8,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-  },
-  totalLabelFinal: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  totalValueFinal: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  actions: {
-    padding: 16,
-    gap: 12,
-  },
-  button: {
-    height: 48,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  buttonPrimary: {
-    backgroundColor: '#3b82f6',
-  },
-  buttonTextPrimary: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  buttonOutline: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  buttonTextOutline: {
-    color: '#666',
-    fontSize: 16,
-    fontWeight: '500',
+  itemTotal: {
+    minWidth: 80,
+    textAlign: 'right',
+    fontWeight: 'bold',
   },
 });
+
+// Cart Items Component
+interface CartItemsProps {
+  items: any[];
+  removeItem: (id: string) => void;
+  updateQuantity: (id: string, quantity: number) => void;
+}
+
+function CartItems({ items, removeItem, updateQuantity }: CartItemsProps) {
+  return (
+    <FlatList
+      data={items}
+      keyExtractor={(item) => item.id}
+      renderItem={({ item }) => (
+        <View style={styles.cartItem}>
+          <View style={styles.cartItemInfo}>
+            <Text variant="titleMedium">{item.name}</Text>
+            <Text variant="bodySmall">
+              ${(item.unitPriceCents / 100).toFixed(2)} c/u
+            </Text>
+          </View>
+          <View style={styles.cartItemActions}>
+            <Button
+              mode="outlined"
+              compact
+              onPress={() => updateQuantity(item.id, item.quantity - 1)}
+            >
+              -
+            </Button>
+            <Text style={styles.quantity}>{item.quantity}</Text>
+            <Button
+              mode="outlined"
+              compact
+              onPress={() => updateQuantity(item.id, item.quantity + 1)}
+            >
+              +
+            </Button>
+            <Text style={styles.itemTotal}>
+              ${(item.totalCents / 100).toFixed(2)}
+            </Text>
+          </View>
+        </View>
+      )}
+    />
+  );
+}
