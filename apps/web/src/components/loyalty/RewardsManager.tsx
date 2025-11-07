@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { loyaltyApi, LoyaltyReward, RewardType, REWARD_TYPE_LABELS } from '@/lib/api/loyalty';
-import { productsApi } from '@/lib/api/products';
+import { loyaltyApi, LoyaltyReward, RewardType, REWARD_TYPE_LABELS, LoyaltyTier } from '@/lib/api/loyalty';
+import { productsApi, Product } from '@/lib/api/products';
 import {
   Card,
   CardContent,
@@ -236,7 +236,7 @@ export function RewardsManager({ programId }: Props) {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {rewards.map((reward) => (
+          {rewards.map((reward: LoyaltyReward) => (
             <Card
               key={reward.id}
               className={`hover:shadow-lg transition-shadow ${
@@ -499,7 +499,7 @@ export function RewardsManager({ programId }: Props) {
                       <SelectValue placeholder="Seleccionar producto" />
                     </SelectTrigger>
                     <SelectContent>
-                      {products.map((product: any) => (
+                      {products.map((product: Product) => (
                         <SelectItem key={product.id} value={product.id}>
                           {product.name}
                         </SelectItem>
@@ -549,7 +549,7 @@ export function RewardsManager({ programId }: Props) {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">Cualquier nivel</SelectItem>
-                      {tiers.map((tier: any) => (
+                      {tiers.map((tier: LoyaltyTier) => (
                         <SelectItem key={tier.id} value={tier.id}>
                           {tier.icon} {tier.name}
                         </SelectItem>

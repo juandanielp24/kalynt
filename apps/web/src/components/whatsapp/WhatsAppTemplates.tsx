@@ -3,19 +3,19 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { whatsappApi, TEMPLATE_TYPE_LABELS, WhatsAppTemplateType } from '@/lib/api/whatsapp';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@retail/ui';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@retail/ui';
+import { Input } from '@retail/ui';
+import { Label } from '@retail/ui';
+import { Textarea } from '@retail/ui';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
+} from '@retail/ui';
+import { Badge } from '@retail/ui';
 import {
   Dialog,
   DialogContent,
@@ -23,8 +23,8 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '@/components/ui/dialog';
-import { Switch } from '@/components/ui/switch';
+} from '@retail/ui';
+import { Switch } from '@retail/ui';
 import {
   Plus,
   Edit,
@@ -147,10 +147,16 @@ export function WhatsAppTemplates() {
     if (editingTemplate) {
       updateTemplateMutation.mutate({
         id: editingTemplate.id,
-        data: formData,
+        data: {
+          ...formData,
+          type: formData.type as WhatsAppTemplateType,
+        },
       });
     } else {
-      createTemplateMutation.mutate(formData);
+      createTemplateMutation.mutate({
+        ...formData,
+        type: formData.type as WhatsAppTemplateType,
+      });
     }
   };
 

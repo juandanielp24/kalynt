@@ -2,14 +2,15 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Inject,
 } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaClient } from '@retail/database';
 import { FranchiseeStatus, RoyaltyStatus } from '@prisma/client';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
 @Injectable()
 export class FranchiseService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject('PRISMA') private readonly prisma: PrismaClient) {}
 
   // ========================================
   // FRANCHISE OPERATIONS
@@ -674,8 +675,7 @@ export class FranchiseService {
   async markRoyaltyPaid(
     id: string,
     tenantId: string,
-    paidAmount: number,
-    paidDate?: Date,
+    paymentData: { paymentMethod: string; transactionId?: string },
   ) {
     const royalty = await this.prisma.franchiseRoyalty.findFirst({
       where: { id, tenantId },
@@ -693,8 +693,9 @@ export class FranchiseService {
       where: { id },
       data: {
         status: RoyaltyStatus.PAID,
-        paidAmount,
-        paidDate: paidDate || new Date(),
+        paidAmount: royalty.totalDue,
+        paidDate: new Date(),
+        notes: `Payment Method: ${paymentData.paymentMethod}${paymentData.transactionId ? `, Transaction ID: ${paymentData.transactionId}` : ''}`,
       },
     });
 
@@ -932,7 +933,7 @@ export class FranchiseService {
       .reduce((sum, r) => sum + (r.paidAmount || 0), 0);
     const totalRoyaltiesPending = royalties
       .filter((r) =>
-        [RoyaltyStatus.PENDING, RoyaltyStatus.OVERDUE].includes(r.status),
+        r.status === RoyaltyStatus.PENDING || r.status === RoyaltyStatus.OVERDUE,
       )
       .reduce((sum, r) => sum + r.totalDue, 0);
 
@@ -1011,44 +1012,4 @@ export class FranchiseService {
     return royalty;
   }
 
-  /**
-   * Mark royalty as paid with payment details
-   */
-  async markRoyaltyPaid(
-    royaltyId: string,
-    tenantId: string,
-    data: {
-      paymentMethod: string;
-      transactionId?: string;
-    },
-  ) {
-    const royalty = await this.prisma.franchiseRoyalty.findFirst({
-      where: { id: royaltyId, tenantId },
-    });
-
-    if (!royalty) {
-      throw new NotFoundException('Royalty record not found');
-    }
-
-    if (royalty.status === RoyaltyStatus.PAID) {
-      throw new BadRequestException('Royalty already marked as paid');
-    }
-
-    // Update royalty with payment info
-    const updated = await this.prisma.franchiseRoyalty.update({
-      where: { id: royaltyId },
-      data: {
-        status: RoyaltyStatus.PAID,
-        paidAmount: royalty.totalDue,
-        paidDate: new Date(),
-        notes: `Paid via ${data.paymentMethod}${data.transactionId ? `. Transaction ID: ${data.transactionId}` : ''}`,
-      },
-      include: {
-        franchise: true,
-        franchisee: true,
-      },
-    });
-
-    return updated;
-  }
 }

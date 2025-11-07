@@ -392,14 +392,14 @@ export default function NewReportPage() {
                               ? 'border-primary bg-primary/5'
                               : 'border-gray-200 hover:border-gray-300'
                           }`}
-                          onClick={() => setFormData({ ...formData, format: 'PDF' })}
+                          onClick={() => setFormData({ ...formData, format: ReportFormat.PDF })}
                         >
                           <input
                             type="radio"
                             name="format"
                             value="PDF"
                             checked={formData.format === 'PDF'}
-                            onChange={() => setFormData({ ...formData, format: 'PDF' })}
+                            onChange={() => setFormData({ ...formData, format: ReportFormat.PDF })}
                           />
                           <FileText className="h-4 w-4" />
                           <span>PDF</span>
@@ -410,14 +410,14 @@ export default function NewReportPage() {
                               ? 'border-primary bg-primary/5'
                               : 'border-gray-200 hover:border-gray-300'
                           }`}
-                          onClick={() => setFormData({ ...formData, format: 'EXCEL' })}
+                          onClick={() => setFormData({ ...formData, format: ReportFormat.EXCEL })}
                         >
                           <input
                             type="radio"
                             name="format"
                             value="EXCEL"
                             checked={formData.format === 'EXCEL'}
-                            onChange={() => setFormData({ ...formData, format: 'EXCEL' })}
+                            onChange={() => setFormData({ ...formData, format: ReportFormat.EXCEL })}
                           />
                           <FileSpreadsheet className="h-4 w-4" />
                           <span>Excel</span>

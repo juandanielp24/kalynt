@@ -51,14 +51,5 @@ export type CreateUserInput = Omit<User, 'id' | 'createdAt' | 'updatedAt' | 'del
 
 export type UpdateUserInput = Partial<Omit<User, 'id' | 'tenantId' | 'createdAt' | 'updatedAt' | 'deletedAt'>>;
 
-export interface LoginCredentials {
-  email: string;
-  password: string;
-  tenantId?: UUID;
-}
-
-export interface AuthToken {
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
-}
+// Re-export auth types from auth module to avoid duplication
+export type { LoginCredentials, AuthToken } from '../auth/auth.types';

@@ -67,12 +67,12 @@ export class AnalyticsAdvancedService {
           },
         });
 
-        const revenue = sales.reduce((sum, s) => sum + s.totalAmount, 0);
+        const revenue = sales.reduce((sum, s) => sum + s.totalCents, 0);
         const cost = sales.reduce((sum, sale) => {
           return (
             sum +
             sale.items.reduce((itemSum, item) => {
-              return itemSum + (item.product?.cost || 0) * item.quantity;
+              return itemSum + (item.product?.costCents || 0) * item.quantity;
             }, 0)
           );
         }, 0);
@@ -131,7 +131,7 @@ export class AnalyticsAdvancedService {
       const frequency = customer.sales.length;
 
       // Monetary (total spent)
-      const monetary = customer.sales.reduce((sum, sale) => sum + sale.totalAmount, 0);
+      const monetary = customer.sales.reduce((sum, sale) => sum + sale.totalCents, 0);
 
       const customerData = {
         id: customer.id,
@@ -255,14 +255,14 @@ export class AnalyticsAdvancedService {
           revenue: 0,
           cost: 0,
           currentStock,
-          price: item.product?.price || 0,
-          productCost: item.product?.cost || 0,
+          price: item.product?.priceCents || 0,
+          productCost: item.product?.costCents || 0,
         };
       }
 
       productMetrics[productId].quantitySold += item.quantity;
-      productMetrics[productId].revenue += item.totalPrice;
-      productMetrics[productId].cost += (item.product?.cost || 0) * item.quantity;
+      productMetrics[productId].revenue += item.totalCents;
+      productMetrics[productId].cost += (item.product?.costCents || 0) * item.quantity;
     });
 
     const products = Object.values(productMetrics).map((p: any) => ({
@@ -305,7 +305,7 @@ export class AnalyticsAdvancedService {
       },
       select: {
         createdAt: true,
-        totalAmount: true,
+        totalCents: true,
       },
     });
 
@@ -319,7 +319,7 @@ export class AnalyticsAdvancedService {
     sales.forEach((sale) => {
       const hour = dayjs(sale.createdAt).hour();
       hourlyData[hour].count += 1;
-      hourlyData[hour].revenue += sale.totalAmount;
+      hourlyData[hour].revenue += sale.totalCents;
     });
 
     return Object.entries(hourlyData).map(([hour, data]) => ({

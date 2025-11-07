@@ -7,10 +7,11 @@ import { SalesReportsExcelService } from './reports-templates/sales-reports-exce
 import { InventoryReportsDataService } from './reports-data/inventory-reports.service';
 import { InventoryReportsHTMLService } from './reports-templates/inventory-reports-html.service';
 import { InventoryReportsExcelService } from './reports-templates/inventory-reports-excel.service';
-import { AuditModule } from '../audit/audit.module';
+// TODO: Implement AuditModule
+// import { AuditModule } from '../audit/audit.module';
 
 @Module({
-  imports: [AuditModule],
+  imports: [], // AuditModule not yet implemented
   controllers: [ReportsController],
   providers: [
     ReportsService,

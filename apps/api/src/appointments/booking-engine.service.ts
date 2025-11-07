@@ -4,7 +4,7 @@ import { AvailabilityService } from './availability.service';
 import { AppointmentsService } from './appointments.service';
 import * as dayjs from 'dayjs';
 
-interface BookingRequest {
+export interface BookingRequest {
   serviceId: string;
   date: Date;
   timeSlot?: Date;
@@ -16,7 +16,7 @@ interface BookingRequest {
   notes?: string;
 }
 
-interface BookingResult {
+export interface BookingResult {
   success: boolean;
   appointment?: any;
   availableSlots?: any[];

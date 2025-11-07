@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@retail/ui';
 import { WhatsAppConfiguration } from '@/components/whatsapp/WhatsAppConfiguration';
 import { WhatsAppMessages } from '@/components/whatsapp/WhatsAppMessages';
 import { WhatsAppSendMessage } from '@/components/whatsapp/WhatsAppSendMessage';

@@ -3,14 +3,21 @@
 # ================================
 FROM node:20-alpine AS base
 
+# Install system dependencies for Prisma
+RUN apk add --no-cache openssl libc6-compat
+
 # Install pnpm
 RUN npm install -g pnpm@8
+
+# Skip Puppeteer chromium download
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 
 WORKDIR /app
 
 # Copy root package files
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY .npmrc ./ 2>/dev/null || true
+# Copy .npmrc if it exists (optional)
+COPY .npmrc* ./
 
 # Copy all workspace packages
 COPY packages ./packages
@@ -29,23 +36,11 @@ RUN pnpm install --frozen-lockfile
 # ================================
 FROM dependencies AS build
 
-# Build shared packages first
-RUN pnpm --filter @retail/database build
-RUN pnpm --filter @retail/types build
+# Generate Prisma Client first (needed for TypeScript compilation)
+RUN pnpm --filter @retail/database db:generate
 
 # Build API
 RUN pnpm --filter @retail/api build
-
-# Generate Prisma Client
-RUN pnpm --filter @retail/database prisma generate
-
-# ================================
-# Production Dependencies
-# ================================
-FROM base AS prod-dependencies
-
-# Install only production dependencies
-RUN pnpm install --frozen-lockfile --prod
 
 # ================================
 # Production Stage
@@ -61,9 +56,9 @@ WORKDIR /app
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
-# Copy production dependencies
-COPY --from=prod-dependencies --chown=nodejs:nodejs /app/node_modules ./node_modules
-COPY --from=prod-dependencies --chown=nodejs:nodejs /app/packages ./packages
+# Copy dependencies and packages from build stage
+COPY --from=build --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=build --chown=nodejs:nodejs /app/packages ./packages
 
 # Copy built application
 COPY --from=build --chown=nodejs:nodejs /app/apps/api/dist ./apps/api/dist

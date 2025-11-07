@@ -2,7 +2,8 @@ import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { SalesController } from './sales.controller';
 import { SalesService } from './sales.service';
-import { AFIPService } from '@retail/ar';
+// TODO: Create @retail/ar package for AFIP integration
+// import { AFIPService } from '@retail/ar';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -11,7 +12,8 @@ import { NotificationsService } from '../notifications/notifications.service';
   controllers: [SalesController],
   providers: [
     SalesService,
-    AFIPService,
+    // TODO: Re-enable when @retail/ar package is created
+    // AFIPService,
     {
       provide: 'NOTIFICATIONS_SERVICE',
       useExisting: NotificationsService,

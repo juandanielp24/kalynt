@@ -33,6 +33,7 @@ export interface PushNotification {
 
 export interface InAppNotification {
   userId: string;
+  tenantId: string;
   type: string;
   title: string;
   message: string;
@@ -99,10 +100,11 @@ export class NotificationsService {
     const saved = await this.prisma.notification.create({
       data: {
         userId: notification.userId,
+        tenantId: notification.tenantId,
         type: notification.type,
         title: notification.title,
         message: notification.message,
-        data: notification.data ? JSON.stringify(notification.data) : null,
+        data: notification.data ?? undefined,
         actionUrl: notification.actionUrl,
         read: false,
       },
@@ -213,6 +215,7 @@ export class NotificationsService {
     for (const user of users) {
       await this.sendInApp({
         userId: user.id,
+        tenantId: tenantId,
         type: 'low_stock',
         title: 'Stock Bajo',
         message: `${product.name} tiene stock bajo (${product.stock} unidades)`,
@@ -312,6 +315,7 @@ export class NotificationsService {
    */
   async updatePreferences(
     userId: string,
+    tenantId: string,
     preferences: {
       emailEnabled?: boolean;
       smsEnabled?: boolean;
@@ -323,6 +327,7 @@ export class NotificationsService {
       where: { userId },
       create: {
         userId,
+        tenantId,
         ...preferences,
       },
       update: preferences,

@@ -12,17 +12,17 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Response } from 'express';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RBACGuard } from '../auth/guards/rbac.guard';
-import { Permissions } from '../auth/decorators/permissions.decorator';
+import { AuthGuard } from '../common/guards/auth.guard';
+import { PermissionGuard } from '../rbac/guards/permission.guard';
+import { RequirePermission, Permissions } from '../rbac/decorators/require-permission.decorator';
 import { PermissionAction, PermissionResource } from '@retail/database';
-import { AuditLog } from '../audit/audit.decorator';
+import { AuditLog } from '../common/decorators/audit-log.decorator';
 import { ReportsService } from './reports.service';
 import * as path from 'path';
 import * as fs from 'fs';
 
 @Controller('reports')
-@UseGuards(JwtAuthGuard, RBACGuard)
+@UseGuards(AuthGuard, PermissionGuard)
 export class ReportsController {
   constructor(private readonly reportsService: ReportsService) {}
 

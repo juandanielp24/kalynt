@@ -98,7 +98,7 @@ export function LocationsList({ onEdit }: LocationsListProps) {
   });
 
   // Filter locations by search
-  const filteredLocations = locations.filter((location) => {
+  const filteredLocations = locations.filter((location: Location) => {
     const searchLower = search.toLowerCase();
     return (
       location.name.toLowerCase().includes(searchLower) ||
@@ -226,7 +226,7 @@ export function LocationsList({ onEdit }: LocationsListProps) {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredLocations.map((location) => (
+          {filteredLocations.map((location: Location) => (
             <Card key={location.id} className="hover:shadow-md transition-shadow">
               <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
                 <div className="space-y-1 flex-1">

@@ -35,7 +35,7 @@ export default function LocationsPage() {
 
   const { data: locationsData, isLoading } = useQuery({
     queryKey: ['locations'],
-    queryFn: locationsApi.getLocations,
+    queryFn: () => locationsApi.getLocations(),
   });
 
   const deleteLocationMutation = useMutation({

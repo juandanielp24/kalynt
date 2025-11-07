@@ -35,3 +35,9 @@ export interface RegisterData {
   tenantSlug: string;
   country?: string;
 }
+
+export interface AuthToken {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+}

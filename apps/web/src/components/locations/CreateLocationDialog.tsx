@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { locationsApi } from '@/lib/api/locations';
+import { locationsApi, LocationType } from '@/lib/api/locations';
 import { usersApi } from '@/lib/api/users';
 import {
   Dialog,
@@ -60,7 +60,7 @@ export function CreateLocationDialog({
   // Fetch users for manager dropdown
   const { data: usersData } = useQuery({
     queryKey: ['users'],
-    queryFn: usersApi.getUsers,
+    queryFn: () => usersApi.getUsers(),
     enabled: open,
   });
 
@@ -118,6 +118,7 @@ export function CreateLocationDialog({
 
     createLocationMutation.mutate({
       ...formData,
+      type: formData.type as LocationType,
       managerId: formData.managerId || undefined,
     });
   };

@@ -48,7 +48,7 @@ export function Header() {
               <div className="flex flex-col gap-1">
                 <p className="text-sm font-medium">Stock bajo</p>
                 <p className="text-xs text-muted-foreground">
-                  El producto "Coca Cola 500ml" tiene solo 5 unidades
+                  El producto &quot;Coca Cola 500ml&quot; tiene solo 5 unidades
                 </p>
               </div>
             </DropdownMenuItem>

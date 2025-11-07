@@ -99,13 +99,13 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   useEffect(() => {
     const fetched = notificationsData || [];
     const merged = [...socketNotifications, ...fetched].reduce((acc, notification) => {
-      if (!acc.find((n) => n.id === notification.id)) {
+      if (!acc.find((n: Notification) => n.id === notification.id)) {
         acc.push(notification);
       }
       return acc;
     }, [] as Notification[]);
 
-    merged.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    merged.sort((a: Notification, b: Notification) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     setAllNotifications(merged);
   }, [notificationsData, socketNotifications]);
 

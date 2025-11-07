@@ -1,10 +1,3 @@
-// Type augmentation for Error.captureStackTrace (Node.js specific)
-declare global {
-  interface ErrorConstructor {
-    captureStackTrace?(target: object, constructor?: Function): void;
-  }
-}
-
 export class AppError extends Error {
   constructor(
     message: string,

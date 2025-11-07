@@ -22,7 +22,7 @@ export function SaleSuccessModal({ sale, isOpen, onClose }: SaleSuccessModalProp
   const printRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = useReactToPrint({
-    content: () => printRef.current,
+    contentRef: printRef,
   });
 
   const hasInvoice = !!sale.invoiceNumber;

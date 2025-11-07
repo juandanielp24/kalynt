@@ -85,7 +85,7 @@ export class LoyaltyRewardsService {
     value?: number;
     productId?: string;
     requiredTierId?: string;
-    stockQuantity?: number;
+    stock?: number;
     validityDays?: number;
     termsConditions?: string;
   }) {
@@ -96,7 +96,7 @@ export class LoyaltyRewardsService {
 
     // Validate value for discount rewards
     if (
-      (data.type === RewardType.PERCENTAGE_DISCOUNT || data.type === RewardType.FIXED_DISCOUNT) &&
+      (data.type === RewardType.DISCOUNT_PERCENTAGE || data.type === RewardType.DISCOUNT_FIXED) &&
       !data.value
     ) {
       throw new BadRequestException('Value is required for discount rewards');
@@ -199,7 +199,7 @@ export class LoyaltyRewardsService {
     }
 
     // Check stock availability
-    if (reward.stockQuantity !== null) {
+    if (reward.stock !== null) {
       const availableStock = await this.getAvailableStock(rewardId);
       if (availableStock <= 0) {
         throw new BadRequestException('Reward is out of stock');
@@ -210,8 +210,8 @@ export class LoyaltyRewardsService {
     const code = await this.generateRedemptionCode();
 
     // Calculate expiration
-    const expiresAt = reward.validityDays
-      ? new Date(Date.now() + reward.validityDays * 24 * 60 * 60 * 1000)
+    const expiresAt = reward.validDays
+      ? new Date(Date.now() + reward.validDays * 24 * 60 * 60 * 1000)
       : undefined;
 
     // Create redemption
@@ -220,7 +220,7 @@ export class LoyaltyRewardsService {
         programId: member.programId,
         memberId,
         rewardId,
-        pointsCost: reward.pointsCost,
+        pointsSpent: reward.pointsCost,
         code,
         status: RedemptionStatus.PENDING,
         expiresAt,
@@ -391,7 +391,7 @@ export class LoyaltyRewardsService {
     // Refund points
     await this.membersService.addPoints(
       redemption.memberId,
-      redemption.pointsCost,
+      redemption.pointsSpent,
       'EARNED_MANUAL' as any,
       `Refund from cancelled redemption: ${redemption.reward.name}${reason ? ` - ${reason}` : ''}`
     );
@@ -433,7 +433,7 @@ export class LoyaltyRewardsService {
 
     while (!isUnique) {
       // Generate 12 character code (XXXX-XXXX-XXXX format)
-      const parts = [];
+      const parts: string[] = [];
       for (let i = 0; i < 3; i++) {
         let part = '';
         for (let j = 0; j < 4; j++) {
@@ -460,10 +460,10 @@ export class LoyaltyRewardsService {
   private async getAvailableStock(rewardId: string): Promise<number> {
     const reward = await this.prisma.loyaltyReward.findUnique({
       where: { id: rewardId },
-      select: { stockQuantity: true },
+      select: { stock: true },
     });
 
-    if (reward?.stockQuantity === null) {
+    if (reward?.stock === null) {
       return Infinity; // Unlimited stock
     }
 
@@ -476,7 +476,7 @@ export class LoyaltyRewardsService {
       },
     });
 
-    return (reward?.stockQuantity || 0) - usedStock;
+    return (reward?.stock || 0) - usedStock;
   }
 
   /**
@@ -538,7 +538,7 @@ export class LoyaltyRewardsService {
       usedRedemptions,
       cancelledRedemptions,
       totalPointsCost: totalRedemptions * reward.pointsCost,
-      availableStock: reward.stockQuantity === null ? 'Unlimited' : availableStock,
+      availableStock: reward.stock === null ? 'Unlimited' : availableStock,
       topRedeemers: enrichedTopRedeemers,
     };
   }

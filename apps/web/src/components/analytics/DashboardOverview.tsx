@@ -55,7 +55,7 @@ export function DashboardOverview({ data, period }: Props) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-blue-600" />
-            Evolución de Ingresos y Ganancia
+            EvoluciÃ³n de Ingresos y Ganancia
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -124,7 +124,7 @@ export function DashboardOverview({ data, period }: Props) {
         {/* Categories Distribution */}
         <Card>
           <CardHeader>
-            <CardTitle>Distribución por Categorías</CardTitle>
+            <CardTitle>DistribuciÃ³n por CategorÃ­as</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={400}>
@@ -178,7 +178,7 @@ export function DashboardOverview({ data, period }: Props) {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MapPin className="h-5 w-5 text-blue-600" />
-                Ventas por Ubicación
+                Ventas por UbicaciÃ³n
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -227,7 +227,7 @@ export function DashboardOverview({ data, period }: Props) {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5 text-blue-600" />
-              Métodos de Pago
+              MÃ©todos de Pago
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -286,13 +286,13 @@ export function DashboardOverview({ data, period }: Props) {
           <CardContent>
             <div className="space-y-3">
               <div>
-                <div className="text-xs text-gray-600 mb-1">Período Actual</div>
+                <div className="text-xs text-gray-600 mb-1">PerÃ­odo Actual</div>
                 <div className="text-2xl font-bold">
                   {data.sales.current.totalSales}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-600 mb-1">Período Anterior</div>
+                <div className="text-xs text-gray-600 mb-1">PerÃ­odo Anterior</div>
                 <div className="text-lg text-gray-700">
                   {data.sales.previous.totalSales}
                 </div>
@@ -325,13 +325,13 @@ export function DashboardOverview({ data, period }: Props) {
           <CardContent>
             <div className="space-y-3">
               <div>
-                <div className="text-xs text-gray-600 mb-1">Período Actual</div>
+                <div className="text-xs text-gray-600 mb-1">PerÃ­odo Actual</div>
                 <div className="text-2xl font-bold">
                   ${data.sales.current.totalRevenue.toLocaleString('es-AR')}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-600 mb-1">Período Anterior</div>
+                <div className="text-xs text-gray-600 mb-1">PerÃ­odo Anterior</div>
                 <div className="text-lg text-gray-700">
                   ${data.sales.previous.totalRevenue.toLocaleString('es-AR')}
                 </div>
@@ -364,13 +364,13 @@ export function DashboardOverview({ data, period }: Props) {
           <CardContent>
             <div className="space-y-3">
               <div>
-                <div className="text-xs text-gray-600 mb-1">Período Actual</div>
+                <div className="text-xs text-gray-600 mb-1">PerÃ­odo Actual</div>
                 <div className="text-2xl font-bold">
                   {data.sales.current.profitMargin.toFixed(1)}%
                 </div>
               </div>
               <div>
-                <div className="text-xs text-gray-600 mb-1">Período Anterior</div>
+                <div className="text-xs text-gray-600 mb-1">PerÃ­odo Anterior</div>
                 <div className="text-lg text-gray-700">
                   {data.sales.previous.profitMargin.toFixed(1)}%
                 </div>

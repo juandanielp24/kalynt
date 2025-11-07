@@ -2,15 +2,16 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Inject,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaClient } from '@retail/database';
 import { TransferStatus } from '@prisma/client';
 
 @Injectable()
 export class StockTransfersService {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject('PRISMA') private readonly prisma: PrismaClient,
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
@@ -379,6 +380,8 @@ export class StockTransfersService {
       where: { id, tenantId },
       include: {
         items: true,
+        toLocation: true,
+        fromLocation: true,
       },
     });
 
@@ -503,6 +506,8 @@ export class StockTransfersService {
       where: { id, tenantId },
       include: {
         items: true,
+        toLocation: true,
+        fromLocation: true,
       },
     });
 
@@ -638,6 +643,8 @@ export class StockTransfersService {
       where: { id, tenantId },
       include: {
         items: true,
+        toLocation: true,
+        fromLocation: true,
       },
     });
 

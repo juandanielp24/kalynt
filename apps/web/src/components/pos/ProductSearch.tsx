@@ -203,7 +203,7 @@ function ProductCard({
               <Badge variant="destructive">Sin stock</Badge>
             )}
             {isLowStock && (
-              <Badge variant="warning">Stock: {stock}</Badge>
+              <Badge variant="secondary">Stock: {stock}</Badge>
             )}
           </div>
 

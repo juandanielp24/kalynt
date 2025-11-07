@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { locationsApi } from '@/lib/api/locations';
+import { locationsApi, LocationStatus } from '@/lib/api/locations';
 import { productsApi } from '@/lib/api/products';
 import {
   Card,
@@ -23,7 +23,7 @@ export function LocationInventoryView() {
 
   const { data: locationsData } = useQuery({
     queryKey: ['locations'],
-    queryFn: () => locationsApi.getLocations({ status: 'ACTIVE' }),
+    queryFn: () => locationsApi.getLocations({ status: LocationStatus.ACTIVE }),
   });
 
   const { data: inventoryData, isLoading } = useQuery({

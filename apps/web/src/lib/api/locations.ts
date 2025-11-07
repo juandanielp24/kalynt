@@ -409,6 +409,13 @@ export const locationsApi = {
     return response.data;
   },
 
+  getRestockSuggestions: async (locationId: string) => {
+    const response = await apiClient.get(
+      `/locations/${locationId}/inventory/restock-suggestions`,
+    );
+    return response.data;
+  },
+
   // ==================== Stock Transfers ====================
 
   getTransfers: async (params?: {

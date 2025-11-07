@@ -102,7 +102,7 @@ export function InvoiceOptions({
                 <p className="font-medium">CUIT requerido</p>
                 <p>
                   Para emitir Factura A debes ingresar el CUIT del cliente en la
-                  pestaña "Cliente"
+                  pestaña &quot;Cliente&quot;
                 </p>
               </div>
             </div>

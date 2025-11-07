@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { locationsApi } from '@/lib/api/locations';
+import { locationsApi, LocationStatus } from '@/lib/api/locations';
 import { productsApi } from '@/lib/api/products';
 import {
   Dialog,
@@ -48,7 +48,7 @@ export function StockTransferForm({ onClose }: Props) {
 
   const { data: locationsData } = useQuery({
     queryKey: ['locations'],
-    queryFn: () => locationsApi.getLocations({ status: 'ACTIVE' }),
+    queryFn: () => locationsApi.getLocations({ status: LocationStatus.ACTIVE }),
   });
 
   const { data: productsData } = useQuery({
@@ -81,7 +81,7 @@ export function StockTransferForm({ onClose }: Props) {
   });
 
   const locations = locationsData || [];
-  const products = productsData || [];
+  const products = productsData?.data || [];
   const inventory = inventoryData || [];
 
   const handleAddItem = (product: any, variantId?: string) => {

@@ -63,6 +63,7 @@ export class AuthService {
         data: {
           tenantId: tenant.id,
           name: 'Sucursal Principal',
+          code: 'MAIN001',
           address: '',
         },
       });
@@ -72,6 +73,7 @@ export class AuthService {
         data: {
           tenantId: tenant.id,
           name: 'General',
+          slug: 'general',
         },
       });
 

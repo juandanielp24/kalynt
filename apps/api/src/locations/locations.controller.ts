@@ -86,7 +86,7 @@ export class LocationsController {
 
   @Post()
   @RequirePermission(PermissionResource.SETTINGS, PermissionAction.CREATE)
-  @AuditLog({ action: 'CREATE', resource: 'LOCATION' })
+  @AuditLog({ action: 'CREATE', entity: 'LOCATION' })
   @ApiOperation({ summary: 'Create location' })
   async createLocation(@CurrentUser() user: any, @Body() data: any) {
     const location = await this.locationsService.createLocation(
@@ -103,7 +103,7 @@ export class LocationsController {
 
   @Put(':id')
   @RequirePermission(PermissionResource.SETTINGS, PermissionAction.UPDATE)
-  @AuditLog({ action: 'UPDATE', resource: 'LOCATION' })
+  @AuditLog({ action: 'UPDATE', entity: 'LOCATION' })
   @ApiOperation({ summary: 'Update location' })
   async updateLocation(
     @CurrentUser() user: any,
@@ -125,7 +125,7 @@ export class LocationsController {
 
   @Delete(':id')
   @RequirePermission(PermissionResource.SETTINGS, PermissionAction.DELETE)
-  @AuditLog({ action: 'DELETE', resource: 'LOCATION' })
+  @AuditLog({ action: 'DELETE', entity: 'LOCATION' })
   @ApiOperation({ summary: 'Delete location' })
   async deleteLocation(@CurrentUser() user: any, @Param('id') id: string) {
     await this.locationsService.deleteLocation(id, user.tenantId);
@@ -138,7 +138,7 @@ export class LocationsController {
 
   @Put(':id/status')
   @RequirePermission(PermissionResource.SETTINGS, PermissionAction.UPDATE)
-  @AuditLog({ action: 'UPDATE', resource: 'LOCATION' })
+  @AuditLog({ action: 'UPDATE', entity: 'LOCATION' })
   @ApiOperation({ summary: 'Change location status' })
   async changeStatus(
     @CurrentUser() user: any,
@@ -172,7 +172,7 @@ export class LocationsController {
 
   @Post(':id/users')
   @RequirePermission(PermissionResource.SETTINGS, PermissionAction.UPDATE)
-  @AuditLog({ action: 'UPDATE', resource: 'LOCATION' })
+  @AuditLog({ action: 'UPDATE', entity: 'LOCATION' })
   @ApiOperation({ summary: 'Assign user to location' })
   async assignUser(
     @CurrentUser() user: any,
@@ -195,7 +195,7 @@ export class LocationsController {
 
   @Delete(':id/users/:userId')
   @RequirePermission(PermissionResource.SETTINGS, PermissionAction.UPDATE)
-  @AuditLog({ action: 'UPDATE', resource: 'LOCATION' })
+  @AuditLog({ action: 'UPDATE', entity: 'LOCATION' })
   @ApiOperation({ summary: 'Remove user from location' })
   async removeUser(
     @CurrentUser() user: any,
@@ -258,7 +258,7 @@ export class LocationsController {
 
   @Put(':id/inventory/:productId')
   @RequirePermission(PermissionResource.INVENTORY, PermissionAction.UPDATE)
-  @AuditLog({ action: 'UPDATE', resource: 'INVENTORY' })
+  @AuditLog({ action: 'UPDATE', entity: 'INVENTORY' })
   @ApiOperation({ summary: 'Update inventory for product at location' })
   async updateInventory(
     @CurrentUser() user: any,
@@ -282,7 +282,7 @@ export class LocationsController {
 
   @Post(':id/inventory/:productId/adjust')
   @RequirePermission(PermissionResource.INVENTORY, PermissionAction.UPDATE)
-  @AuditLog({ action: 'UPDATE', resource: 'INVENTORY' })
+  @AuditLog({ action: 'UPDATE', entity: 'INVENTORY' })
   @ApiOperation({ summary: 'Adjust inventory quantity' })
   async adjustInventory(
     @CurrentUser() user: any,
@@ -307,7 +307,7 @@ export class LocationsController {
 
   @Post(':id/inventory/sync-product')
   @RequirePermission(PermissionResource.INVENTORY, PermissionAction.UPDATE)
-  @AuditLog({ action: 'UPDATE', resource: 'INVENTORY' })
+  @AuditLog({ action: 'UPDATE', entity: 'INVENTORY' })
   @ApiOperation({ summary: 'Sync product to location' })
   async syncProduct(
     @CurrentUser() user: any,
@@ -365,7 +365,7 @@ export class LocationsController {
 
   @Post('transfers')
   @RequirePermission(PermissionResource.INVENTORY, PermissionAction.CREATE)
-  @AuditLog({ action: 'CREATE', resource: 'STOCK_TRANSFER' })
+  @AuditLog({ action: 'CREATE', entity: 'STOCK_TRANSFER' })
   @ApiOperation({ summary: 'Create stock transfer' })
   async createTransfer(@CurrentUser() user: any, @Body() data: any) {
     const transfer = await this.transfersService.createTransfer(
@@ -383,7 +383,7 @@ export class LocationsController {
 
   @Put('transfers/:id/approve')
   @RequirePermission(PermissionResource.INVENTORY, PermissionAction.UPDATE)
-  @AuditLog({ action: 'UPDATE', resource: 'STOCK_TRANSFER' })
+  @AuditLog({ action: 'UPDATE', entity: 'STOCK_TRANSFER' })
   @ApiOperation({ summary: 'Approve transfer' })
   async approveTransfer(@CurrentUser() user: any, @Param('id') id: string) {
     const transfer = await this.transfersService.approveTransfer(
@@ -401,7 +401,7 @@ export class LocationsController {
 
   @Put('transfers/:id/reject')
   @RequirePermission(PermissionResource.INVENTORY, PermissionAction.UPDATE)
-  @AuditLog({ action: 'UPDATE', resource: 'STOCK_TRANSFER' })
+  @AuditLog({ action: 'UPDATE', entity: 'STOCK_TRANSFER' })
   @ApiOperation({ summary: 'Reject transfer' })
   async rejectTransfer(
     @CurrentUser() user: any,
@@ -424,7 +424,7 @@ export class LocationsController {
 
   @Put('transfers/:id/ship')
   @RequirePermission(PermissionResource.INVENTORY, PermissionAction.UPDATE)
-  @AuditLog({ action: 'UPDATE', resource: 'STOCK_TRANSFER' })
+  @AuditLog({ action: 'UPDATE', entity: 'STOCK_TRANSFER' })
   @ApiOperation({ summary: 'Ship transfer' })
   async shipTransfer(
     @CurrentUser() user: any,
@@ -447,7 +447,7 @@ export class LocationsController {
 
   @Put('transfers/:id/receive')
   @RequirePermission(PermissionResource.INVENTORY, PermissionAction.UPDATE)
-  @AuditLog({ action: 'UPDATE', resource: 'STOCK_TRANSFER' })
+  @AuditLog({ action: 'UPDATE', entity: 'STOCK_TRANSFER' })
   @ApiOperation({ summary: 'Receive transfer' })
   async receiveTransfer(
     @CurrentUser() user: any,
@@ -470,7 +470,7 @@ export class LocationsController {
 
   @Put('transfers/:id/complete')
   @RequirePermission(PermissionResource.INVENTORY, PermissionAction.UPDATE)
-  @AuditLog({ action: 'UPDATE', resource: 'STOCK_TRANSFER' })
+  @AuditLog({ action: 'UPDATE', entity: 'STOCK_TRANSFER' })
   @ApiOperation({ summary: 'Complete transfer' })
   async completeTransfer(@CurrentUser() user: any, @Param('id') id: string) {
     const transfer = await this.transfersService.completeTransfer(
@@ -487,7 +487,7 @@ export class LocationsController {
 
   @Put('transfers/:id/cancel')
   @RequirePermission(PermissionResource.INVENTORY, PermissionAction.UPDATE)
-  @AuditLog({ action: 'UPDATE', resource: 'STOCK_TRANSFER' })
+  @AuditLog({ action: 'UPDATE', entity: 'STOCK_TRANSFER' })
   @ApiOperation({ summary: 'Cancel transfer' })
   async cancelTransfer(
     @CurrentUser() user: any,
@@ -569,7 +569,7 @@ export class LocationsController {
 
   @Post('franchises')
   @RequirePermission(PermissionResource.SETTINGS, PermissionAction.CREATE)
-  @AuditLog({ action: 'CREATE', resource: 'FRANCHISE' })
+  @AuditLog({ action: 'CREATE', entity: 'FRANCHISE' })
   @ApiOperation({ summary: 'Create franchise' })
   async createFranchise(@CurrentUser() user: any, @Body() data: any) {
     const franchise = await this.franchiseService.createFranchise(
@@ -586,7 +586,7 @@ export class LocationsController {
 
   @Put('franchises/:id')
   @RequirePermission(PermissionResource.SETTINGS, PermissionAction.UPDATE)
-  @AuditLog({ action: 'UPDATE', resource: 'FRANCHISE' })
+  @AuditLog({ action: 'UPDATE', entity: 'FRANCHISE' })
   @ApiOperation({ summary: 'Update franchise' })
   async updateFranchise(
     @CurrentUser() user: any,
@@ -608,7 +608,7 @@ export class LocationsController {
 
   @Delete('franchises/:id')
   @RequirePermission(PermissionResource.SETTINGS, PermissionAction.DELETE)
-  @AuditLog({ action: 'DELETE', resource: 'FRANCHISE' })
+  @AuditLog({ action: 'DELETE', entity: 'FRANCHISE' })
   @ApiOperation({ summary: 'Delete franchise' })
   async deleteFranchise(@CurrentUser() user: any, @Param('id') id: string) {
     await this.franchiseService.deleteFranchise(id, user.tenantId);
@@ -678,7 +678,7 @@ export class LocationsController {
 
   @Post('franchisees')
   @RequirePermission(PermissionResource.SETTINGS, PermissionAction.CREATE)
-  @AuditLog({ action: 'CREATE', resource: 'FRANCHISEE' })
+  @AuditLog({ action: 'CREATE', entity: 'FRANCHISEE' })
   @ApiOperation({ summary: 'Create franchisee' })
   async createFranchisee(@CurrentUser() user: any, @Body() data: any) {
     const franchisee = await this.franchiseService.createFranchisee(
@@ -695,7 +695,7 @@ export class LocationsController {
 
   @Put('franchisees/:id')
   @RequirePermission(PermissionResource.SETTINGS, PermissionAction.UPDATE)
-  @AuditLog({ action: 'UPDATE', resource: 'FRANCHISEE' })
+  @AuditLog({ action: 'UPDATE', entity: 'FRANCHISEE' })
   @ApiOperation({ summary: 'Update franchisee' })
   async updateFranchisee(
     @CurrentUser() user: any,
@@ -717,7 +717,7 @@ export class LocationsController {
 
   @Post('franchisees/:id/calculate-royalties')
   @RequirePermission(PermissionResource.SETTINGS, PermissionAction.CREATE)
-  @AuditLog({ action: 'CREATE', resource: 'FRANCHISE_ROYALTY' })
+  @AuditLog({ action: 'CREATE', entity: 'FRANCHISE_ROYALTY' })
   @ApiOperation({ summary: 'Calculate royalties for franchisee' })
   async calculateRoyalties(
     @CurrentUser() user: any,
@@ -740,7 +740,7 @@ export class LocationsController {
 
   @Put('royalties/:id/mark-paid')
   @RequirePermission(PermissionResource.SETTINGS, PermissionAction.UPDATE)
-  @AuditLog({ action: 'UPDATE', resource: 'FRANCHISE_ROYALTY' })
+  @AuditLog({ action: 'UPDATE', entity: 'FRANCHISE_ROYALTY' })
   @ApiOperation({ summary: 'Mark royalty as paid' })
   async markRoyaltyPaid(
     @CurrentUser() user: any,

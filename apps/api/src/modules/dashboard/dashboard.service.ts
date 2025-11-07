@@ -1,10 +1,10 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '@/common/services/prisma.service';
+import { Injectable, Inject } from '@nestjs/common';
+import { PrismaClient } from '@retail/database';
 import { startOfDay, endOfDay, subDays, format, eachDayOfInterval } from 'date-fns';
 
 @Injectable()
 export class DashboardService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject('PRISMA') private readonly prisma: PrismaClient) {}
 
   async getDashboardData(
     tenantId: string,

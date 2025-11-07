@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { locationsApi } from '@/lib/api/locations';
+import { locationsApi, TransferStatus } from '@/lib/api/locations';
 import { useLocation } from '@/contexts/LocationContext';
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 import { PermissionGuard } from '@/components/auth/PermissionGuard';
@@ -76,7 +76,7 @@ export default function TransfersPage() {
     queryKey: ['transfers', statusFilter, locationFilter],
     queryFn: () =>
       locationsApi.getTransfers({
-        status: statusFilter !== 'all' ? statusFilter : undefined,
+        status: statusFilter !== 'all' ? (statusFilter as TransferStatus) : undefined,
         fromLocationId: locationFilter === 'from' ? currentLocation?.id : undefined,
         toLocationId: locationFilter === 'to' ? currentLocation?.id : undefined,
       }),
@@ -84,7 +84,7 @@ export default function TransfersPage() {
 
   const { data: statsData } = useQuery({
     queryKey: ['transfer-stats', currentLocation?.id],
-    queryFn: () => locationsApi.getTransferStats(currentLocation?.id),
+    queryFn: () => locationsApi.getTransferStatistics({ locationId: currentLocation?.id }),
   });
 
   const transfers = transfersData?.data?.transfers || [];

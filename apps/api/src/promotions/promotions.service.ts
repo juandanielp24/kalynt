@@ -310,7 +310,7 @@ export class PromotionsService {
     });
 
     // Filter applicable promotions
-    const applicable = [];
+    const applicable: typeof promotions = [];
 
     for (const promo of promotions) {
       if (await this.isPromotionApplicable(promo, data)) {

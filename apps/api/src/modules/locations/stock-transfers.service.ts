@@ -603,7 +603,7 @@ export class StockTransfersService {
   async cancelTransfer(id: string, tenantId: string, userId: string, dto: CancelTransferDto) {
     const transfer = await this.getTransfer(id, tenantId);
 
-    if (![TransferStatus.PENDING, TransferStatus.APPROVED].includes(transfer.status)) {
+    if (transfer.status !== TransferStatus.PENDING && transfer.status !== TransferStatus.APPROVED) {
       throw new BadRequestException(
         `Transfer can only be cancelled if it's PENDING or APPROVED. Current status: ${transfer.status}`
       );

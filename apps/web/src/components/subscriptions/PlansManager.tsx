@@ -604,7 +604,7 @@ export function PlansManager() {
               {/* Options */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                  <Label htmlFor="isPopular">Marcar como "Popular"</Label>
+                  <Label htmlFor="isPopular">Marcar como &quot;Popular&quot;</Label>
                   <Switch
                     id="isPopular"
                     checked={formData.isPopular}

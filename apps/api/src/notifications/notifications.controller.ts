@@ -14,6 +14,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger'
 import { NotificationsService } from './notifications.service';
 import { AuthGuard } from '../common/guards/auth.guard';
 import { TenantGuard } from '../common/guards/tenant.guard';
+import { GetTenant } from '../common/decorators/get-tenant.decorator';
 
 @ApiTags('Notifications')
 @ApiBearerAuth()
@@ -113,6 +114,7 @@ export class NotificationsController {
   @ApiOperation({ summary: 'Update notification preferences' })
   async updatePreferences(
     @Headers('x-user-id') userId: string,
+    @GetTenant() tenantId: string,
     @Body()
     preferences: {
       emailEnabled?: boolean;
@@ -123,6 +125,7 @@ export class NotificationsController {
   ) {
     const updated = await this.notificationsService.updatePreferences(
       userId,
+      tenantId,
       preferences,
     );
 

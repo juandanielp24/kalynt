@@ -2,12 +2,13 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Inject,
 } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaClient } from '@retail/database';
 
 @Injectable()
 export class LocationInventoryService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject('PRISMA') private readonly prisma: PrismaClient) {}
 
   /**
    * Get inventory for a location
@@ -292,7 +293,7 @@ export class LocationInventoryService {
       where: { tenantId, isActive: true },
     });
 
-    const lowStockItems = [];
+    const lowStockItems: any[] = [];
 
     for (const location of locations) {
       const items = await this.prisma.locationInventory.findMany({

@@ -3,13 +3,13 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { whatsappApi, type WhatsAppConfig } from '@/lib/api/whatsapp';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
+import { Button } from '@retail/ui';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@retail/ui';
+import { Label } from '@retail/ui';
+import { Switch } from '@retail/ui';
+import { Badge } from '@retail/ui';
 import { AlertCircle, CheckCircle2, Loader2, QrCode, Smartphone } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription } from '@retail/ui';
 import { toast } from 'sonner';
 
 export function WhatsAppConfiguration() {
@@ -175,7 +175,7 @@ export function WhatsAppConfiguration() {
                       <ol className="mt-2 list-inside list-decimal text-sm">
                         <li>Abre WhatsApp en tu teléfono</li>
                         <li>Ve a Configuración → Dispositivos vinculados</li>
-                        <li>Toca "Vincular un dispositivo"</li>
+                        <li>Toca &quot;Vincular un dispositivo&quot;</li>
                         <li>Escanea este código QR</li>
                       </ol>
                     </AlertDescription>

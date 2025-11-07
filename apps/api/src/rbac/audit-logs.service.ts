@@ -52,12 +52,6 @@ export class AuditLogsService {
               email: true,
             },
           },
-          role: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
         },
         orderBy: { createdAt: 'desc' },
         skip: (page - 1) * limit,

@@ -114,18 +114,17 @@ export class PushService {
    */
   async registerDeviceToken(
     userId: string,
+    tenantId: string,
     token: string,
     platform: 'ios' | 'android',
   ) {
     return this.prisma.deviceToken.upsert({
       where: {
-        userId_token: {
-          userId,
-          token,
-        },
+        token: token,
       },
       create: {
         userId,
+        tenantId,
         token,
         platform,
         isActive: true,

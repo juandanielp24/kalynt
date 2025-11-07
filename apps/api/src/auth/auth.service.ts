@@ -1,5 +1,5 @@
 import { Injectable, Inject, UnauthorizedException, BadRequestException, ConflictException } from '@nestjs/common';
-import { PrismaClient } from '@retail/database';
+import { PrismaClient, LocationType, LocationStatus } from '@retail/database';
 import * as bcrypt from 'bcryptjs';
 import { auth } from './auth.config';
 import { RegisterDto, LoginDto, ResetPasswordDto, ChangePasswordDto } from './dto';
@@ -15,8 +15,8 @@ export class AuthService {
    */
   async register(dto: RegisterDto) {
     // 1. Verificar que el email no existe
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email: dto.email },
+    const existingUser = await this.prisma.user.findFirst({
+      where: { email: dto.email, deletedAt: null },
     });
 
     if (existingUser) {
@@ -34,10 +34,10 @@ export class AuthService {
       }
     }
 
-    // 3. Hash de contraseña
+    // 3. Hash de contraseï¿½a
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
-    // 4. Crear tenant y usuario en transacción
+    // 4. Crear tenant y usuario en transacciï¿½n
     const result = await this.prisma.$transaction(async (tx) => {
       // Crear tenant
       const tenant = await tx.tenant.create({
@@ -53,13 +53,14 @@ export class AuthService {
         },
       });
 
-      // Crear ubicación por defecto
+      // Crear ubicaciï¿½n por defecto
       const location = await tx.location.create({
         data: {
           tenantId: tenant.id,
           name: 'Sucursal Principal',
-          type: 'store',
-          isActive: true,
+          code: 'MAIN001',
+          type: LocationType.STORE,
+          status: LocationStatus.ACTIVE,
         },
       });
 
@@ -70,7 +71,7 @@ export class AuthService {
           email: dto.email,
           name: dto.name,
           role: 'owner', // Primer usuario es owner
-          emailVerified: false, // Requiere verificación
+          emailVerified: false, // Requiere verificaciï¿½n
         },
       });
 
@@ -78,8 +79,8 @@ export class AuthService {
       await tx.account.create({
         data: {
           userId: user.id,
-          accountId: user.id,
           providerId: 'credential',
+          providerAccountId: user.id, // Use user.id as the account identifier
           password: hashedPassword,
         },
       });
@@ -87,7 +88,7 @@ export class AuthService {
       return { user, tenant, location };
     });
 
-    // 5. Enviar email de verificación
+    // 5. Enviar email de verificaciï¿½n
     // TODO: Integrar con NotificationsService
     // await this.sendVerificationEmail(result.user);
 
@@ -111,8 +112,8 @@ export class AuthService {
    */
   async login(dto: LoginDto) {
     // 1. Buscar usuario
-    const user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
+    const user = await this.prisma.user.findFirst({
+      where: { email: dto.email, deletedAt: null },
       include: {
         accounts: true,
         tenant: true,
@@ -123,7 +124,7 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // 2. Verificar contraseña
+    // 2. Verificar contraseï¿½a
     const account = user.accounts.find(acc => acc.providerId === 'credential');
 
     if (!account || !account.password) {
@@ -136,17 +137,17 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // 3. Verificar que el usuario está activo
+    // 3. Verificar que el usuario estï¿½ activo
     if (!user.isActive) {
       throw new UnauthorizedException('Account is disabled');
     }
 
-    // 4. Verificar que el tenant está activo
+    // 4. Verificar que el tenant estï¿½ activo
     if (user.tenant.status !== 'active') {
       throw new UnauthorizedException('Account is suspended');
     }
 
-    // 5. Crear sesión
+    // 5. Crear sesiï¿½n
     const session = await this.createSession(user.id);
 
     return {
@@ -169,11 +170,11 @@ export class AuthService {
   }
 
   /**
-   * Crea una sesión para el usuario
+   * Crea una sesiï¿½n para el usuario
    */
   private async createSession(userId: string) {
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7); // 7 días
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 dï¿½as
 
     const session = await this.prisma.session.create({
       data: {
@@ -190,7 +191,7 @@ export class AuthService {
   }
 
   /**
-   * Verifica una sesión
+   * Verifica una sesiï¿½n
    */
   async verifySession(token: string) {
     const session = await this.prisma.session.findUnique({
@@ -217,7 +218,7 @@ export class AuthService {
   }
 
   /**
-   * Cierra sesión
+   * Cierra sesiï¿½n
    */
   async logout(token: string) {
     await this.prisma.session.delete({
@@ -228,10 +229,10 @@ export class AuthService {
   }
 
   /**
-   * Solicita recuperación de contraseña
+   * Solicita recuperaciï¿½n de contraseï¿½a
    */
   async requestPasswordReset(email: string) {
-    const user = await this.prisma.user.findUnique({
+    const user = await this.prisma.user.findFirst({
       where: { email },
     });
 
@@ -261,7 +262,7 @@ export class AuthService {
   }
 
   /**
-   * Resetea la contraseña usando el token
+   * Resetea la contraseï¿½a usando el token
    */
   async resetPassword(dto: ResetPasswordDto) {
     // 1. Verificar token
@@ -274,7 +275,7 @@ export class AuthService {
     }
 
     // 2. Buscar usuario
-    const user = await this.prisma.user.findUnique({
+    const user = await this.prisma.user.findFirst({
       where: { email: verification.identifier },
       include: { accounts: true },
     });
@@ -283,7 +284,7 @@ export class AuthService {
       throw new BadRequestException('User not found');
     }
 
-    // 3. Actualizar contraseña
+    // 3. Actualizar contraseï¿½a
     const hashedPassword = await bcrypt.hash(dto.newPassword, 10);
 
     const account = user.accounts.find(acc => acc.providerId === 'credential');
@@ -309,7 +310,7 @@ export class AuthService {
   }
 
   /**
-   * Cambia la contraseña del usuario autenticado
+   * Cambia la contraseï¿½a del usuario autenticado
    */
   async changePassword(userId: string, dto: ChangePasswordDto) {
     const user = await this.prisma.user.findUnique({
@@ -327,14 +328,14 @@ export class AuthService {
       throw new BadRequestException('No password account found');
     }
 
-    // Verificar contraseña actual
+    // Verificar contraseï¿½a actual
     const isValidPassword = await bcrypt.compare(dto.currentPassword, account.password);
 
     if (!isValidPassword) {
       throw new BadRequestException('Current password is incorrect');
     }
 
-    // Actualizar contraseña
+    // Actualizar contraseï¿½a
     const hashedPassword = await bcrypt.hash(dto.newPassword, 10);
 
     await this.prisma.account.update({
@@ -357,7 +358,7 @@ export class AuthService {
       throw new BadRequestException('Invalid or expired verification token');
     }
 
-    await this.prisma.user.update({
+    await this.prisma.user.updateMany({
       where: { email: verification.identifier },
       data: { emailVerified: true },
     });
@@ -370,7 +371,7 @@ export class AuthService {
   }
 
   /**
-   * Genera un slug único a partir del nombre del tenant
+   * Genera un slug ï¿½nico a partir del nombre del tenant
    */
   private generateSlug(name: string): string {
     const baseSlug = name

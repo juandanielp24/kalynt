@@ -58,10 +58,10 @@ export function SalesTrends() {
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2">
             <TrendingUp className="h-6 w-6 text-blue-600" />
-            Análisis de Tendencias
+            AnÃ¡lisis de Tendencias
           </h2>
           <p className="text-gray-600">
-            Evolución histórica de ventas e ingresos
+            EvoluciÃ³n histÃ³rica de ventas e ingresos
           </p>
         </div>
 
@@ -76,7 +76,7 @@ export function SalesTrends() {
           <SelectContent>
             <SelectItem value="week">Por Semana</SelectItem>
             <SelectItem value="month">Por Mes</SelectItem>
-            <SelectItem value="year">Por Año</SelectItem>
+            <SelectItem value="year">Por AÃ±o</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -86,7 +86,7 @@ export function SalesTrends() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
-              Total Períodos
+              Total PerÃ­odos
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -143,7 +143,7 @@ export function SalesTrends() {
       {/* Revenue and Profit Trend */}
       <Card>
         <CardHeader>
-          <CardTitle>Evolución de Ingresos y Ganancia</CardTitle>
+          <CardTitle>EvoluciÃ³n de Ingresos y Ganancia</CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={400}>
@@ -181,7 +181,7 @@ export function SalesTrends() {
       {/* Sales Count Trend */}
       <Card>
         <CardHeader>
-          <CardTitle>Cantidad de Ventas por Período</CardTitle>
+          <CardTitle>Cantidad de Ventas por PerÃ­odo</CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
@@ -207,7 +207,7 @@ export function SalesTrends() {
       {/* Average Ticket Trend */}
       <Card>
         <CardHeader>
-          <CardTitle>Evolución del Ticket Promedio</CardTitle>
+          <CardTitle>EvoluciÃ³n del Ticket Promedio</CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
@@ -236,7 +236,7 @@ export function SalesTrends() {
       {/* Growth Rate */}
       <Card>
         <CardHeader>
-          <CardTitle>Tasa de Crecimiento (% vs período anterior)</CardTitle>
+          <CardTitle>Tasa de Crecimiento (% vs perÃ­odo anterior)</CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
@@ -270,7 +270,7 @@ export function SalesTrends() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-3 px-4">Período</th>
+                  <th className="text-left py-3 px-4">PerÃ­odo</th>
                   <th className="text-right py-3 px-4">Ventas</th>
                   <th className="text-right py-3 px-4">Ingresos</th>
                   <th className="text-right py-3 px-4">Costos</th>

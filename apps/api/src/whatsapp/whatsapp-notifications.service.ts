@@ -52,7 +52,7 @@ export class WhatsAppNotificationsService {
       const variables = {
         customerName: sale.customer.name,
         orderNumber: sale.saleNumber,
-        totalAmount: `${sale.totalAmount.toFixed(2)}`,
+        totalAmount: `${(sale.totalCents / 100).toFixed(2)}`,
         orderDate: new Date(sale.createdAt).toLocaleDateString('es-AR'),
         itemsCount: sale.items.length,
         businessName: config.businessName || 'Nuestra tienda',
@@ -100,7 +100,7 @@ export class WhatsAppNotificationsService {
       const variables = {
         customerName: sale.customer.name,
         orderNumber: sale.saleNumber,
-        amount: `${sale.totalAmount.toFixed(2)}`,
+        amount: `${(sale.totalCents / 100).toFixed(2)}`,
         paymentDate: new Date().toLocaleDateString('es-AR'),
         businessName: config.businessName || 'Nuestra tienda',
       };
@@ -120,9 +120,16 @@ export class WhatsAppNotificationsService {
 
   /**
    * Send payment reminder
+   * TODO: This feature requires schema updates to support partial payments
+   * Need to add: paidCents, dueDate fields to Sale model
    */
   async sendPaymentReminder(saleId: string): Promise<void> {
     try {
+      // Feature not implemented: requires paidCents and dueDate fields in Sale model
+      this.logger.warn(`Payment reminders not yet implemented - schema updates required`);
+      return;
+
+      /* TODO: Uncomment when schema is updated
       const sale = await this.prisma.sale.findUnique({
         where: { id: saleId },
         include: {
@@ -135,7 +142,7 @@ export class WhatsAppNotificationsService {
       }
 
       // Only send reminder if there's pending amount
-      const pendingAmount = sale.totalAmount - sale.paidAmount;
+      const pendingAmount = sale.totalCents - (sale.paidCents || 0);
       if (pendingAmount <= 0) {
         return;
       }
@@ -153,7 +160,7 @@ export class WhatsAppNotificationsService {
       const variables = {
         customerName: sale.customer.name,
         orderNumber: sale.saleNumber,
-        amount: `${pendingAmount.toFixed(2)}`,
+        amount: `${(pendingAmount / 100).toFixed(2)}`,
         dueDate: sale.dueDate
           ? new Date(sale.dueDate).toLocaleDateString('es-AR')
           : 'Sin fecha definida',
@@ -168,6 +175,7 @@ export class WhatsAppNotificationsService {
       );
 
       this.logger.log(`Payment reminder sent for sale ${sale.saleNumber}`);
+      */
     } catch (error) {
       this.logger.error(`Failed to send payment reminder: ${error.message}`);
     }
@@ -218,7 +226,7 @@ export class WhatsAppNotificationsService {
         const variables = {
           customerName: customer.name,
           productName: product.name,
-          price: `${product.price.toFixed(2)}`,
+          price: `${(product.priceCents / 100).toFixed(2)}`,
           quantity: totalStock.toString(),
           businessName: config.businessName || 'Nuestra tienda',
         };
@@ -263,9 +271,10 @@ export class WhatsAppNotificationsService {
       }
 
       const totalStock = product.stock.reduce((sum, s) => sum + s.quantity, 0);
+      const minStock = product.stock.reduce((sum, s) => sum + s.minQuantity, 0);
 
       // Only send if stock is below minimum
-      if (totalStock > (product.minStock || 0)) {
+      if (totalStock > minStock) {
         return;
       }
 
@@ -306,7 +315,7 @@ export class WhatsAppNotificationsService {
 Producto: ${product.name}
 SKU: ${product.sku}
 Stock actual: ${totalStock}
-Stock mínimo: ${product.minStock || 0}
+Stock mínimo: ${minStock}
 
 Se requiere reposición urgente.`;
 
@@ -447,9 +456,16 @@ Se requiere reposición urgente.`;
 
   /**
    * Schedule payment reminders (to be called by cron)
+   * TODO: This feature requires schema updates to support partial payments
+   * Need to add: paidCents, dueDate fields to Sale model and customer relation
    */
   async schedulePaymentReminders(): Promise<void> {
     try {
+      // Feature not implemented: requires dueDate field and customer relation in Sale model
+      this.logger.warn(`Scheduled payment reminders not yet implemented - schema updates required`);
+      return;
+
+      /* TODO: Uncomment when schema is updated
       this.logger.log('Running scheduled payment reminders...');
 
       // Get all tenants with WhatsApp enabled
@@ -494,6 +510,7 @@ Se requiere reposición urgente.`;
       }
 
       this.logger.log('Scheduled payment reminders completed');
+      */
     } catch (error) {
       this.logger.error(`Failed to run scheduled payment reminders: ${error.message}`);
     }

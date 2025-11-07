@@ -52,7 +52,8 @@ export const productsApi = {
    * GET /products
    */
   async findAll(query?: QueryProductsDto): Promise<PaginatedProductsResponse> {
-    return apiClient.get<PaginatedProductsResponse>('/products', { params: query as any });
+    const response = await apiClient.get<PaginatedProductsResponse>('/products', { params: query as any });
+    return response.data;
   },
 
   /**
@@ -60,7 +61,8 @@ export const productsApi = {
    * GET /products
    */
   async getProducts(query?: QueryProductsDto): Promise<PaginatedProductsResponse> {
-    return apiClient.get<PaginatedProductsResponse>('/products', { params: query as any });
+    const response = await apiClient.get<PaginatedProductsResponse>('/products', { params: query as any });
+    return response.data;
   },
 
   /**
@@ -68,7 +70,8 @@ export const productsApi = {
    * GET /products/:id
    */
   async findOne(id: string): Promise<Product> {
-    return apiClient.get<Product>(`/products/${id}`);
+    const response = await apiClient.get<Product>(`/products/${id}`);
+    return response.data;
   },
 
   /**
@@ -76,6 +79,7 @@ export const productsApi = {
    * GET /products/barcode/:barcode
    */
   async findByBarcode(barcode: string): Promise<Product> {
-    return apiClient.get<Product>(`/products/barcode/${barcode}`);
+    const response = await apiClient.get<Product>(`/products/barcode/${barcode}`);
+    return response.data;
   },
 };

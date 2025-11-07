@@ -43,10 +43,9 @@ export class InventoryReportsDataService {
       return sum + (costCents * item.quantity) / 100;
     }, 0);
 
-    // Low stock items (quantity <= minStock)
+    // Low stock items (quantity <= minQuantity)
     const lowStockItems = stockItems.filter(item => {
-      const minStock = item.product?.minStock || 0;
-      return item.quantity <= minStock;
+      return item.quantity <= item.minQuantity;
     });
 
     // Out of stock items
@@ -61,8 +60,7 @@ export class InventoryReportsDataService {
     // Stock status distribution
     const stockStatus = {
       normal: stockItems.filter(item => {
-        const minStock = item.product?.minStock || 0;
-        return item.quantity > minStock;
+        return item.quantity > item.minQuantity;
       }).length,
       low: lowStockItems.length,
       out: outOfStockItems.length,
@@ -85,8 +83,8 @@ export class InventoryReportsDataService {
         productSku: item.product?.sku || '-',
         locationName: item.location?.name || 'Sin ubicación',
         currentStock: item.quantity,
-        minStock: item.product?.minStock || 0,
-        difference: item.quantity - (item.product?.minStock || 0),
+        minStock: item.minQuantity,
+        difference: item.quantity - item.minQuantity,
       })),
       outOfStockItems: outOfStockItems.map(item => ({
         productId: item.productId,
@@ -116,8 +114,8 @@ export class InventoryReportsDataService {
 
     if (filters?.locationId) {
       whereClause.OR = [
-        { sourceLocationId: filters.locationId },
-        { destinationLocationId: filters.locationId },
+        { fromLocationId: filters.locationId },
+        { toLocationId: filters.locationId },
       ];
     }
 
@@ -130,7 +128,7 @@ export class InventoryReportsDataService {
     }
 
     // Get transfers (inventory movements)
-    const transfers = await this.prisma.transfer.findMany({
+    const transfers = await this.prisma.stockTransfer.findMany({
       where: whereClause,
       include: {
         items: {
@@ -138,9 +136,9 @@ export class InventoryReportsDataService {
             product: true,
           },
         },
-        sourceLocation: true,
-        destinationLocation: true,
-        user: true,
+        fromLocation: true,
+        toLocation: true,
+        requestedBy: true,
       },
       orderBy: {
         createdAt: 'desc',
@@ -150,7 +148,7 @@ export class InventoryReportsDataService {
     // Calculate summary
     const totalMovements = transfers.length;
     const totalItemsMoved = transfers.reduce((sum, transfer) => {
-      return sum + transfer.items.reduce((itemSum, item) => itemSum + item.quantity, 0);
+      return sum + transfer.items.reduce((itemSum, item) => itemSum + (item.quantitySent ?? item.quantityRequested), 0);
     }, 0);
 
     // Group by status
@@ -166,13 +164,13 @@ export class InventoryReportsDataService {
     const recentMovements = transfers.slice(0, 50).map(transfer => ({
       id: transfer.id,
       transferNumber: transfer.transferNumber,
-      sourceLocation: transfer.sourceLocation?.name || '-',
-      destinationLocation: transfer.destinationLocation?.name || '-',
+      sourceLocation: transfer.fromLocation?.name || '-',
+      destinationLocation: transfer.toLocation?.name || '-',
       status: transfer.status,
       itemCount: transfer.items.length,
-      totalQuantity: transfer.items.reduce((sum, item) => sum + item.quantity, 0),
+      totalQuantity: transfer.items.reduce((sum, item) => sum + (item.quantitySent ?? item.quantityRequested), 0),
       createdAt: transfer.createdAt,
-      createdBy: transfer.user?.name || 'Desconocido',
+      createdBy: transfer.requestedBy?.name || 'Desconocido',
     }));
 
     return {

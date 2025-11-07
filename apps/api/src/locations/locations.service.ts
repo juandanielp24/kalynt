@@ -1,10 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
+import { PrismaClient } from '@retail/database';
 import { LocationType, LocationStatus } from '@prisma/client';
 
 @Injectable()
 export class LocationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject('PRISMA') private readonly prisma: PrismaClient) {}
 
   /**
    * Get all locations with optional filters
@@ -280,8 +280,8 @@ export class LocationsService {
       }
 
       // Check for circular reference
-      let currentParent = parent;
-      while (currentParent.parentId) {
+      let currentParent: typeof parent | null = parent;
+      while (currentParent?.parentId) {
         if (currentParent.parentId === id) {
           throw new BadRequestException('Circular parent reference detected');
         }

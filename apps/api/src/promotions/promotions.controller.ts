@@ -9,18 +9,18 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RbacGuard } from '../auth/guards/rbac.guard';
-import { RequirePermission } from '../auth/decorators/require-permission.decorator';
-import { GetTenant } from '../auth/decorators/get-tenant.decorator';
-import { AuditLog } from '../audit/decorators/audit-log.decorator';
+import { AuthGuard } from '../common/guards/auth.guard';
+import { PermissionGuard } from '../rbac/guards/permission.guard';
+import { RequirePermission } from '../rbac/decorators/require-permission.decorator';
+import { GetTenant } from '../common/decorators/get-tenant.decorator';
+import { AuditLog } from '../common/decorators/audit-log.decorator';
 import { PromotionsService } from './promotions.service';
 import { CouponsService } from './coupons.service';
 import { DiscountEngineService } from './discount-engine.service';
 import { PromotionType, DiscountType } from '@retail/database';
 
 @Controller('promotions')
-@UseGuards(JwtAuthGuard, RbacGuard)
+@UseGuards(AuthGuard, PermissionGuard)
 export class PromotionsController {
   constructor(
     private promotionsService: PromotionsService,
@@ -75,7 +75,7 @@ export class PromotionsController {
    */
   @Post()
   @RequirePermission('PROMOTIONS', 'CREATE')
-  @AuditLog('CREATE_PROMOTION')
+  @AuditLog('promotions', 'create')
   async createPromotion(
     @GetTenant() tenantId: string,
     @Body() data: {
@@ -117,7 +117,7 @@ export class PromotionsController {
    */
   @Put(':id')
   @RequirePermission('PROMOTIONS', 'UPDATE')
-  @AuditLog('UPDATE_PROMOTION')
+  @AuditLog('promotions', 'update')
   async updatePromotion(
     @GetTenant() tenantId: string,
     @Param('id') id: string,
@@ -140,7 +140,7 @@ export class PromotionsController {
    */
   @Delete(':id')
   @RequirePermission('PROMOTIONS', 'DELETE')
-  @AuditLog('DELETE_PROMOTION')
+  @AuditLog('promotions', 'delete')
   async deletePromotion(
     @GetTenant() tenantId: string,
     @Param('id') id: string,
@@ -154,7 +154,7 @@ export class PromotionsController {
    */
   @Put(':id/toggle')
   @RequirePermission('PROMOTIONS', 'UPDATE')
-  @AuditLog('TOGGLE_PROMOTION_STATUS')
+  @AuditLog('promotions', 'toggle-status')
   async togglePromotionStatus(
     @GetTenant() tenantId: string,
     @Param('id') id: string,
@@ -211,7 +211,7 @@ export class PromotionsController {
    */
   @Post(':promotionId/coupons')
   @RequirePermission('PROMOTIONS', 'CREATE')
-  @AuditLog('CREATE_COUPON')
+  @AuditLog('coupons', 'create')
   async createCoupon(
     @GetTenant() tenantId: string,
     @Param('promotionId') promotionId: string,
@@ -230,7 +230,7 @@ export class PromotionsController {
    */
   @Post(':promotionId/coupons/bulk')
   @RequirePermission('PROMOTIONS', 'CREATE')
-  @AuditLog('GENERATE_BULK_COUPONS')
+  @AuditLog('coupons', 'generate-bulk')
   async generateBulkCoupons(
     @GetTenant() tenantId: string,
     @Param('promotionId') promotionId: string,
@@ -276,7 +276,7 @@ export class PromotionsController {
    */
   @Put('coupons/:id/deactivate')
   @RequirePermission('PROMOTIONS', 'UPDATE')
-  @AuditLog('DEACTIVATE_COUPON')
+  @AuditLog('coupons', 'deactivate')
   async deactivateCoupon(
     @GetTenant() tenantId: string,
     @Param('id') id: string,
@@ -290,7 +290,7 @@ export class PromotionsController {
    */
   @Put('coupons/:id/assign')
   @RequirePermission('PROMOTIONS', 'UPDATE')
-  @AuditLog('ASSIGN_COUPON')
+  @AuditLog('coupons', 'assign')
   async assignCoupon(
     @GetTenant() tenantId: string,
     @Param('id') id: string,

@@ -1,4 +1,4 @@
-export interface MercadoPagoConfig {
+export interface MercadoPagoConfigOptions {
   accessToken: string;
   publicKey: string;
   webhookSecret: string;

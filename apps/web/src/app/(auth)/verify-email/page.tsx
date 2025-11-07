@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { apiClient } from '@/lib/api-client';
@@ -164,7 +166,7 @@ export default function VerifyEmailPage() {
         </div>
         <h2 className="text-3xl font-bold text-gray-900">Check your email</h2>
         <p className="text-gray-600">
-          We've sent a verification link to{' '}
+          We&apos;ve sent a verification link to{' '}
           <span className="font-medium text-gray-900">{email || 'your email address'}</span>
         </p>
         <p className="text-sm text-gray-500">
@@ -172,7 +174,7 @@ export default function VerifyEmailPage() {
         </p>
 
         <div className="mt-6 space-y-4">
-          <p className="text-sm text-gray-600">Didn't receive the email?</p>
+          <p className="text-sm text-gray-600">Didn&apos;t receive the email?</p>
 
           {resendSuccess && (
             <div className="rounded-md bg-green-50 p-4 text-sm text-green-800">

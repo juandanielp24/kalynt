@@ -193,7 +193,7 @@ export function TiersManager({ programId }: Props) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {tiers.map((tier) => (
+        {tiers.map((tier: LoyaltyTier) => (
           <Card
             key={tier.id}
             className="border-2 hover:shadow-lg transition-shadow"

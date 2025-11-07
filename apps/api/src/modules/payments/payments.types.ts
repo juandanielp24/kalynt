@@ -1,21 +1,8 @@
-export enum PaymentMethod {
-  CASH = 'cash',
-  DEBIT_CARD = 'debit_card',
-  CREDIT_CARD = 'credit_card',
-  MERCADO_PAGO = 'mercado_pago',
-  MODO = 'modo',
-  BANK_TRANSFER = 'bank_transfer',
-  QR_CODE = 'qr_code',
-}
+// Import enums from Prisma client
+import { PaymentMethod, PaymentStatus } from '@prisma/client';
 
-export enum PaymentStatus {
-  PENDING = 'pending',
-  APPROVED = 'approved',
-  REJECTED = 'rejected',
-  CANCELLED = 'cancelled',
-  IN_PROCESS = 'in_process',
-  REFUNDED = 'refunded',
-}
+// Re-export for convenience
+export { PaymentMethod, PaymentStatus };
 
 export interface PaymentRequest {
   saleId: string;

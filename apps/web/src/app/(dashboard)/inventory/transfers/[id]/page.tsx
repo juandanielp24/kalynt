@@ -127,7 +127,7 @@ export default function TransferDetailPage() {
 
   const sendMutation = useMutation({
     mutationFn: () =>
-      locationsApi.sendTransfer(transferId, {
+      locationsApi.shipTransfer(transferId, {
         trackingNumber: trackingNumber || undefined,
         shippingMethod: shippingMethod || undefined,
       }),
@@ -149,7 +149,15 @@ export default function TransferDetailPage() {
   });
 
   const receiveMutation = useMutation({
-    mutationFn: () => locationsApi.receiveTransfer(transferId),
+    mutationFn: () => {
+      // Accept all sent quantities as received
+      const items = transfer?.items?.map((item: any) => ({
+        id: item.id,
+        quantityReceived: item.quantitySent || item.quantityRequested,
+      })) || [];
+
+      return locationsApi.receiveTransfer(transferId, { items });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['transfer', transferId] });
       queryClient.invalidateQueries({ queryKey: ['transfers'] });

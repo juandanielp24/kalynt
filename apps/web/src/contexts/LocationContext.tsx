@@ -21,7 +21,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
 
   const { data: locationsData, isLoading, refetch } = useQuery({
     queryKey: ['locations'],
-    queryFn: locationsApi.getLocations,
+    queryFn: () => locationsApi.getLocations(),
     enabled: !!user,
   });
 

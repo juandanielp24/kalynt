@@ -43,7 +43,7 @@ export class PaymentsService {
           method: dto.method,
           amountCents: dto.amountCents,
           status: PaymentStatus.PENDING,
-          metadata: dto.metadata,
+          externalData: dto.metadata,
         },
       });
 

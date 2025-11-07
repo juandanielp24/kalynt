@@ -16,7 +16,7 @@ export default function UnauthorizedPage() {
         <div className="space-y-4">
           <h1 className="text-4xl font-bold text-gray-900">Access Denied</h1>
           <h2 className="text-xl font-semibold text-gray-700">
-            You don't have permission to access this page
+            You don&apos;t have permission to access this page
           </h2>
           <p className="text-gray-600">
             This page is restricted to users with specific roles. If you believe you should have access, please contact your administrator.

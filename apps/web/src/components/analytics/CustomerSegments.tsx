@@ -86,7 +86,7 @@ export function CustomerSegments({ onExport }: Props) {
   });
 
   if (isLoading) {
-    return <div className="text-center py-12">Cargando segmentación...</div>;
+    return <div className="text-center py-12">Cargando segmentaciÃ³n...</div>;
   }
 
   const data = segmentData?.data;
@@ -105,10 +105,10 @@ export function CustomerSegments({ onExport }: Props) {
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2">
             <Users className="h-6 w-6 text-blue-600" />
-            Segmentación de Clientes (RFM)
+            SegmentaciÃ³n de Clientes (RFM)
           </h2>
           <p className="text-gray-600">
-            Análisis de Recencia, Frecuencia y Monetario
+            AnÃ¡lisis de Recencia, Frecuencia y Monetario
           </p>
         </div>
 
@@ -160,7 +160,7 @@ export function CustomerSegments({ onExport }: Props) {
             <div className="text-2xl font-bold text-orange-600">
               {data.summary.atRiskCustomers}
             </div>
-            <p className="text-xs text-gray-600 mt-1">Requieren atención</p>
+            <p className="text-xs text-gray-600 mt-1">Requieren atenciÃ³n</p>
           </CardContent>
         </Card>
 
@@ -174,7 +174,7 @@ export function CustomerSegments({ onExport }: Props) {
             <div className="text-2xl font-bold text-gray-600">
               {data.summary.inactiveCustomers}
             </div>
-            <p className="text-xs text-gray-600 mt-1">Más de 6 meses</p>
+            <p className="text-xs text-gray-600 mt-1">MÃ¡s de 6 meses</p>
           </CardContent>
         </Card>
       </div>
@@ -182,7 +182,7 @@ export function CustomerSegments({ onExport }: Props) {
       {/* Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Distribución de Segmentos</CardTitle>
+          <CardTitle>DistribuciÃ³n de Segmentos</CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={400}>
@@ -252,7 +252,7 @@ export function CustomerSegments({ onExport }: Props) {
                         <div className="flex-1">
                           <div className="font-medium">{customer.name}</div>
                           <div className="text-xs text-gray-600">
-                            Última compra: {customer.lastPurchase}
+                            Ãšltima compra: {customer.lastPurchase}
                           </div>
                         </div>
                         <div className="text-right">
@@ -267,7 +267,7 @@ export function CustomerSegments({ onExport }: Props) {
                     ))}
                     {segment.count > 5 && (
                       <div className="text-xs text-gray-600 text-center pt-2">
-                        +{segment.count - 5} clientes más
+                        +{segment.count - 5} clientes mÃ¡s
                       </div>
                     )}
                   </div>
@@ -285,7 +285,7 @@ export function CustomerSegments({ onExport }: Props) {
       {/* Recommendations */}
       <Card>
         <CardHeader>
-          <CardTitle>=¡ Recomendaciones por Segmento</CardTitle>
+          <CardTitle>ðŸŽ¯ Recomendaciones por Segmento</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -294,9 +294,9 @@ export function CustomerSegments({ onExport }: Props) {
                 Champions & Loyal
               </h4>
               <ul className="text-sm text-yellow-800 space-y-1">
-                <li>" Programa VIP con beneficios exclusivos</li>
-                <li>" Early access a nuevos productos</li>
-                <li>" Descuentos especiales y promociones</li>
+                <li>â€¢ Programa VIP con beneficios exclusivos</li>
+                <li>â€¢ Early access a nuevos productos</li>
+                <li>â€¢ Descuentos especiales y promociones</li>
               </ul>
             </div>
 
@@ -305,29 +305,29 @@ export function CustomerSegments({ onExport }: Props) {
                 Potential Loyalist & New Customers
               </h4>
               <ul className="text-sm text-blue-800 space-y-1">
-                <li>" Programa de onboarding personalizado</li>
-                <li>" Cupones de segunda compra</li>
-                <li>" Comunicación frecuente con valor</li>
+                <li>â€¢ Programa de onboarding personalizado</li>
+                <li>â€¢ Cupones de segunda compra</li>
+                <li>â€¢ ComunicaciÃ³n frecuente con valor</li>
               </ul>
             </div>
 
             <div className="p-4 bg-orange-50 rounded-lg">
               <h4 className="font-semibold text-orange-900 mb-2">
-                At Risk & Can't Lose
+                At Risk & Can&apos;t Lose
               </h4>
               <ul className="text-sm text-orange-800 space-y-1">
-                <li>" Campaña de reactivación urgente</li>
-                <li>" Ofertas personalizadas agresivas</li>
-                <li>" Contacto directo para feedback</li>
+                <li>â€¢ CampaÃ±a de reactivaciÃ³n urgente</li>
+                <li>â€¢ Ofertas personalizadas agresivas</li>
+                <li>â€¢ Contacto directo para feedback</li>
               </ul>
             </div>
 
             <div className="p-4 bg-gray-50 rounded-lg">
               <h4 className="font-semibold text-gray-900 mb-2">Hibernating</h4>
               <ul className="text-sm text-gray-800 space-y-1">
-                <li>" Campaña win-back con incentivo fuerte</li>
-                <li>" Encuesta para entender motivos</li>
-                <li>" Considerar costo de reactivación</li>
+                <li>â€¢ CampaÃ±a win-back con incentivo fuerte</li>
+                <li>â€¢ Encuesta para entender motivos</li>
+                <li>â€¢ Considerar costo de reactivaciÃ³n</li>
               </ul>
             </div>
           </div>

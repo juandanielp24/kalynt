@@ -64,7 +64,7 @@ export class AppointmentsController {
 
   @Post('services')
   @RequirePermission(PermissionResource.SETTINGS, PermissionAction.CREATE)
-  @AuditLog({ action: 'CREATE', resource: 'SERVICE' })
+  @AuditLog({ action: 'CREATE', entity: 'SERVICE' })
   async createService(@CurrentUser() user: any, @Body() data: any) {
     const service = await this.servicesService.createService(user.tenantId, data);
 
@@ -77,7 +77,7 @@ export class AppointmentsController {
 
   @Put('services/:id')
   @RequirePermission(PermissionResource.SETTINGS, PermissionAction.UPDATE)
-  @AuditLog({ action: 'UPDATE', resource: 'SERVICE' })
+  @AuditLog({ action: 'UPDATE', entity: 'SERVICE' })
   async updateService(
     @CurrentUser() user: any,
     @Param('id') id: string,
@@ -94,7 +94,7 @@ export class AppointmentsController {
 
   @Delete('services/:id')
   @RequirePermission(PermissionResource.SETTINGS, PermissionAction.DELETE)
-  @AuditLog({ action: 'DELETE', resource: 'SERVICE' })
+  @AuditLog({ action: 'DELETE', entity: 'SERVICE' })
   async deleteService(@CurrentUser() user: any, @Param('id') id: string) {
     await this.servicesService.deleteService(id, user.tenantId);
 
@@ -106,7 +106,7 @@ export class AppointmentsController {
 
   @Put('services/:id/toggle')
   @RequirePermission(PermissionResource.SETTINGS, PermissionAction.UPDATE)
-  @AuditLog({ action: 'UPDATE', resource: 'SERVICE' })
+  @AuditLog({ action: 'UPDATE', entity: 'SERVICE' })
   async toggleServiceStatus(@CurrentUser() user: any, @Param('id') id: string) {
     const service = await this.servicesService.toggleServiceStatus(id, user.tenantId);
 
@@ -161,7 +161,7 @@ export class AppointmentsController {
 
   @Post('resources')
   @RequirePermission(PermissionResource.SETTINGS, PermissionAction.CREATE)
-  @AuditLog({ action: 'CREATE', resource: 'RESOURCE' })
+  @AuditLog({ action: 'CREATE', entity: 'RESOURCE' })
   async createResource(@CurrentUser() user: any, @Body() data: any) {
     const resource = await this.resourcesService.createResource(user.tenantId, data);
 
@@ -174,7 +174,7 @@ export class AppointmentsController {
 
   @Put('resources/:id')
   @RequirePermission(PermissionResource.SETTINGS, PermissionAction.UPDATE)
-  @AuditLog({ action: 'UPDATE', resource: 'RESOURCE' })
+  @AuditLog({ action: 'UPDATE', entity: 'RESOURCE' })
   async updateResource(
     @CurrentUser() user: any,
     @Param('id') id: string,
@@ -191,7 +191,7 @@ export class AppointmentsController {
 
   @Delete('resources/:id')
   @RequirePermission(PermissionResource.SETTINGS, PermissionAction.DELETE)
-  @AuditLog({ action: 'DELETE', resource: 'RESOURCE' })
+  @AuditLog({ action: 'DELETE', entity: 'RESOURCE' })
   async deleteResource(@CurrentUser() user: any, @Param('id') id: string) {
     await this.resourcesService.deleteResource(id, user.tenantId);
 
@@ -203,7 +203,7 @@ export class AppointmentsController {
 
   @Put('resources/:id/toggle')
   @RequirePermission(PermissionResource.SETTINGS, PermissionAction.UPDATE)
-  @AuditLog({ action: 'UPDATE', resource: 'RESOURCE' })
+  @AuditLog({ action: 'UPDATE', entity: 'RESOURCE' })
   async toggleResourceStatus(@CurrentUser() user: any, @Param('id') id: string) {
     const resource = await this.resourcesService.toggleResourceStatus(id, user.tenantId);
 
@@ -216,7 +216,7 @@ export class AppointmentsController {
 
   @Post('resources/:id/availability')
   @RequirePermission(PermissionResource.SETTINGS, PermissionAction.UPDATE)
-  @AuditLog({ action: 'UPDATE', resource: 'RESOURCE_AVAILABILITY' })
+  @AuditLog({ action: 'UPDATE', entity: 'RESOURCE_AVAILABILITY' })
   async setResourceAvailability(
     @CurrentUser() user: any,
     @Param('id') id: string,
@@ -262,7 +262,7 @@ export class AppointmentsController {
 
   @Post('blackout-dates')
   @RequirePermission(PermissionResource.SETTINGS, PermissionAction.CREATE)
-  @AuditLog({ action: 'CREATE', resource: 'BLACKOUT_DATE' })
+  @AuditLog({ action: 'CREATE', entity: 'BLACKOUT_DATE' })
   async addBlackoutDate(@CurrentUser() user: any, @Body() data: any) {
     const blackoutDate = await this.resourcesService.addBlackoutDate(
       user.tenantId,
@@ -278,7 +278,7 @@ export class AppointmentsController {
 
   @Delete('blackout-dates/:id')
   @RequirePermission(PermissionResource.SETTINGS, PermissionAction.DELETE)
-  @AuditLog({ action: 'DELETE', resource: 'BLACKOUT_DATE' })
+  @AuditLog({ action: 'DELETE', entity: 'BLACKOUT_DATE' })
   async deleteBlackoutDate(@CurrentUser() user: any, @Param('id') id: string) {
     await this.resourcesService.deleteBlackoutDate(id, user.tenantId);
 
@@ -332,7 +332,7 @@ export class AppointmentsController {
 
   @Post()
   @RequirePermission(PermissionResource.SALES, PermissionAction.CREATE)
-  @AuditLog({ action: 'CREATE', resource: 'APPOINTMENT' })
+  @AuditLog({ action: 'CREATE', entity: 'APPOINTMENT' })
   async createAppointment(@CurrentUser() user: any, @Body() data: any) {
     const appointment = await this.appointmentsService.createAppointment(
       user.tenantId,
@@ -349,7 +349,7 @@ export class AppointmentsController {
 
   @Put(':id')
   @RequirePermission(PermissionResource.SALES, PermissionAction.UPDATE)
-  @AuditLog({ action: 'UPDATE', resource: 'APPOINTMENT' })
+  @AuditLog({ action: 'UPDATE', entity: 'APPOINTMENT' })
   async updateAppointment(
     @CurrentUser() user: any,
     @Param('id') id: string,
@@ -370,7 +370,7 @@ export class AppointmentsController {
 
   @Put(':id/cancel')
   @RequirePermission(PermissionResource.SALES, PermissionAction.UPDATE)
-  @AuditLog({ action: 'UPDATE', resource: 'APPOINTMENT' })
+  @AuditLog({ action: 'UPDATE', entity: 'APPOINTMENT' })
   async cancelAppointment(
     @CurrentUser() user: any,
     @Param('id') id: string,
@@ -392,7 +392,7 @@ export class AppointmentsController {
 
   @Put(':id/confirm')
   @RequirePermission(PermissionResource.SALES, PermissionAction.UPDATE)
-  @AuditLog({ action: 'UPDATE', resource: 'APPOINTMENT' })
+  @AuditLog({ action: 'UPDATE', entity: 'APPOINTMENT' })
   async confirmAppointment(@CurrentUser() user: any, @Param('id') id: string) {
     const appointment = await this.appointmentsService.confirmAppointment(
       id,
@@ -408,7 +408,7 @@ export class AppointmentsController {
 
   @Put(':id/checkin')
   @RequirePermission(PermissionResource.SALES, PermissionAction.UPDATE)
-  @AuditLog({ action: 'UPDATE', resource: 'APPOINTMENT' })
+  @AuditLog({ action: 'UPDATE', entity: 'APPOINTMENT' })
   async checkInAppointment(@CurrentUser() user: any, @Param('id') id: string) {
     const appointment = await this.appointmentsService.checkInAppointment(
       id,
@@ -424,7 +424,7 @@ export class AppointmentsController {
 
   @Put(':id/complete')
   @RequirePermission(PermissionResource.SALES, PermissionAction.UPDATE)
-  @AuditLog({ action: 'UPDATE', resource: 'APPOINTMENT' })
+  @AuditLog({ action: 'UPDATE', entity: 'APPOINTMENT' })
   async completeAppointment(@CurrentUser() user: any, @Param('id') id: string) {
     const appointment = await this.appointmentsService.completeAppointment(
       id,
@@ -440,7 +440,7 @@ export class AppointmentsController {
 
   @Put(':id/no-show')
   @RequirePermission(PermissionResource.SALES, PermissionAction.UPDATE)
-  @AuditLog({ action: 'UPDATE', resource: 'APPOINTMENT' })
+  @AuditLog({ action: 'UPDATE', entity: 'APPOINTMENT' })
   async markNoShow(@CurrentUser() user: any, @Param('id') id: string) {
     const appointment = await this.appointmentsService.markNoShow(id, user.tenantId);
 

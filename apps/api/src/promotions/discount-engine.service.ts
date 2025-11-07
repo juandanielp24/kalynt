@@ -3,7 +3,7 @@ import { PrismaClient, DiscountType } from '@retail/database';
 import { PromotionsService } from './promotions.service';
 import { CouponsService } from './coupons.service';
 
-interface CalculationItem {
+export interface CalculationItem {
   productId: string;
   name: string;
   quantity: number;
@@ -12,7 +12,7 @@ interface CalculationItem {
   categoryId?: string;
 }
 
-interface DiscountResult {
+export interface DiscountResult {
   appliedPromotions: AppliedPromotion[];
   originalAmount: number;
   totalDiscount: number;
@@ -20,7 +20,7 @@ interface DiscountResult {
   items: CalculationItem[];
 }
 
-interface AppliedPromotion {
+export interface AppliedPromotion {
   promotionId: string;
   promotionName: string;
   couponId?: string;

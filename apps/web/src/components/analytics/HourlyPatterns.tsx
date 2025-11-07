@@ -51,7 +51,7 @@ export function HourlyPatterns() {
 
   const { data: patternsData, isLoading } = useQuery({
     queryKey: ['hourly-patterns', days],
-    queryFn: () => analyticsApi.getHourlyPatterns(days),
+    queryFn: () => analyticsApi.getHourlyPattern(days),
   });
 
   const data = patternsData?.data;

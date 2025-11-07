@@ -191,7 +191,7 @@ export function CreateTransferDialog({ open, onOpenChange }: CreateTransferDialo
         notes: item.notes,
       })),
       shippingMethod: formData.shippingMethod || undefined,
-      estimatedArrival: formData.estimatedArrival || undefined,
+      estimatedArrival: formData.estimatedArrival ? new Date(formData.estimatedArrival) : undefined,
       notes: formData.notes || undefined,
       internalNotes: formData.internalNotes || undefined,
     });
@@ -308,7 +308,7 @@ export function CreateTransferDialog({ open, onOpenChange }: CreateTransferDialo
                 <div className="border-2 border-dashed rounded-lg p-8 text-center">
                   <p className="text-gray-600">No hay productos agregados</p>
                   <p className="text-sm text-gray-500 mt-1">
-                    Haz clic en "Buscar Producto" para agregar items
+                    Haz clic en &quot;Buscar Producto&quot; para agregar items
                   </p>
                 </div>
               ) : (

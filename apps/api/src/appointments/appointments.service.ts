@@ -118,7 +118,7 @@ export class AppointmentsService {
     const endTime = startTime.add(service.duration, 'minute');
 
     // Determine resource
-    let resourceId = data.resourceId;
+    let resourceId: string | null | undefined = data.resourceId;
 
     if (!resourceId) {
       // Find available resource

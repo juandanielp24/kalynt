@@ -349,7 +349,7 @@ export function StockTransfersList() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {transfers.map((transfer) => (
+          {transfers.map((transfer: StockTransfer) => (
             <Card key={transfer.id}>
               <CardHeader>
                 <div className="flex items-start justify-between">

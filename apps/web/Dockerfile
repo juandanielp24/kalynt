@@ -3,14 +3,21 @@
 # ================================
 FROM node:20-alpine AS base
 
+# Install system dependencies
+RUN apk add --no-cache openssl libc6-compat
+
 # Install pnpm
 RUN npm install -g pnpm@8
+
+# Skip Puppeteer chromium download
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 
 WORKDIR /app
 
 # Copy root package files
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY .npmrc ./ 2>/dev/null || true
+# Copy .npmrc if it exists (optional)
+COPY .npmrc* ./
 
 # Copy workspace packages
 COPY packages ./packages

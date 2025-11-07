@@ -10,7 +10,7 @@ export class InvoiceFormatter {
   static formatInvoiceNumber(salePoint: number, invoiceNumber: number): string {
     const paddedPoint = salePoint.toString().padStart(5, '0');
     const paddedNumber = invoiceNumber.toString().padStart(8, '0');
-    return \`\${paddedPoint}-\${paddedNumber}\`;
+    return `${paddedPoint}-${paddedNumber}`;
   }
 
   /**

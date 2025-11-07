@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
-  // Cargar sesi髇 al montar
+  // Cargar sesi贸n al montar
   useEffect(() => {
     loadSession();
   }, []);
@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(response.data.data.user);
       }
     } catch (error) {
-      // No hay sesi髇 activa
+      // No hay sesi贸n activa
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -88,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const response = await apiClient.post('/auth/register', data);
 
       if (response.data.success) {
-        // Redirigir a p醙ina de verificaci髇 de email
+        // Redirigir a p谩gina de verificaci贸n de email
         router.push('/verify-email?email=' + encodeURIComponent(data.email));
       }
     } catch (error: any) {
@@ -102,7 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       router.push('/login');
     } catch (error) {
-      // Limpiar sesi髇 local incluso si falla la llamada
+      // Limpiar sesi贸n local incluso si falla la llamada
       setUser(null);
       router.push('/login');
     }

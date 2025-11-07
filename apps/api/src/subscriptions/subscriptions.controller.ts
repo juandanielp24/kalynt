@@ -11,11 +11,12 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { PermissionsGuard } from '../auth/guards/permissions.guard';
-import { RequirePermissions } from '../auth/decorators/permissions.decorator';
-import { AuditInterceptor } from '../common/interceptors/audit.interceptor';
-import { CurrentTenant } from '../auth/decorators/current-tenant.decorator';
+import { AuthGuard } from '../common/guards/auth.guard';
+import { PermissionGuard } from '../rbac/guards/permission.guard';
+import { RequirePermission, Permissions, RequirePermissions } from '../rbac/decorators/require-permission.decorator';
+// TODO: Implement AuditInterceptor
+// import { AuditInterceptor } from '../common/interceptors/audit.interceptor';
+import { GetTenant as CurrentTenant } from '../common/decorators/get-tenant.decorator';
 import { PlansService } from './plans.service';
 import { SubscriptionsService } from './subscriptions.service';
 import { BillingService } from './billing.service';
@@ -23,8 +24,9 @@ import { UsageService } from './usage.service';
 import { BillingInterval, SubscriptionStatus } from '@retail/database';
 
 @Controller('subscriptions')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
-@UseInterceptors(AuditInterceptor)
+@UseGuards(AuthGuard, PermissionGuard)
+// TODO: Implement AuditInterceptor
+// @UseInterceptors(AuditInterceptor)
 export class SubscriptionsController {
   constructor(
     private readonly plansService: PlansService,

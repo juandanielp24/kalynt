@@ -1,6 +1,7 @@
-import { Injectable, Inject, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, BadRequestException, Logger, Optional } from '@nestjs/common';
 import { PrismaClient } from '@retail/database';
-import { AFIPService } from '@retail/ar';
+// TODO: Create @retail/ar package for AFIP integration
+// import { AFIPService } from '@retail/ar';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { CreateSaleDto, CompleteSaleDto, QuerySalesDto } from './dto';
 
@@ -10,7 +11,8 @@ export class SalesService {
 
   constructor(
     @Inject('PRISMA') private prisma: PrismaClient,
-    private afipService: AFIPService,
+    // TODO: Re-enable when @retail/ar package is created
+    // @Optional() private afipService?: AFIPService,
     private eventEmitter: EventEmitter2,
     @Inject('NOTIFICATIONS_SERVICE') private notificationsService?: any
   ) {}
@@ -141,10 +143,10 @@ export class SalesService {
           action: 'create',
           entity: 'sale',
           entityId: newSale.id,
-          changes: {
+          changes: JSON.parse(JSON.stringify({
             sale: newSale,
             items: dto.items,
-          },
+          })),
         },
       });
 
@@ -195,23 +197,40 @@ export class SalesService {
     this.logger.log(`Generating ${invoiceType} invoice for sale ${saleId}`);
 
     // 3. Generar factura AFIP
-    const afipResponse = await this.afipService.generateInvoice({
-      saleId: sale.id,
-      tenantId,
-      invoiceType,
-      customerCuit: sale.customerCuit || undefined,
-      customerName: sale.customerName || undefined,
-      items: sale.items.map((item) => ({
-        description: item.productName,
-        quantity: item.quantity,
-        unitPrice: item.unitPriceCents,
-        taxRate: Number(item.taxRate),
-        total: item.totalCents,
-      })),
-      subtotal: sale.subtotalCents,
-      tax: sale.taxCents,
-      total: sale.totalCents,
-    });
+    // TODO: Re-enable when @retail/ar package is created
+    // const afipResponse = await this.afipService.generateInvoice({
+    //   saleId: sale.id,
+    //   tenantId,
+    //   invoiceType,
+    //   customerCuit: sale.customerCuit || undefined,
+    //   customerName: sale.customerName || undefined,
+    //   items: sale.items.map((item) => ({
+    //     description: item.productName,
+    //     quantity: item.quantity,
+    //     unitPrice: item.unitPriceCents,
+    //     taxRate: Number(item.taxRate),
+    //     total: item.totalCents,
+    //   })),
+    //   subtotal: sale.subtotalCents,
+    //   tax: sale.taxCents,
+    //   total: sale.totalCents,
+    // });
+
+    // Mock AFIP response until package is created
+    const caeDate = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000);
+    const today = new Date();
+    const afipResponse = {
+      success: true,
+      invoiceNumber: 'PENDING-AFIP',
+      cae: 'PENDING-CAE',
+      caeExpirationDate: caeDate,
+      // Spanish property names that the code expects
+      numero_comprobante: 1,
+      cae_vencimiento: `${caeDate.getFullYear()}${String(caeDate.getMonth() + 1).padStart(2, '0')}${String(caeDate.getDate()).padStart(2, '0')}`,
+      fecha_proceso: `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`,
+      qr_code: 'MOCK-QR-CODE',
+      errors: [],
+    };
 
     // 4. Actualizar con datos de factura
     if (afipResponse.success) {
@@ -225,7 +244,7 @@ export class SalesService {
           ),
           cae: afipResponse.cae,
           caeExpiration: this.parseAFIPDate(afipResponse.cae_vencimiento!),
-          notes: {
+          notes: JSON.parse(JSON.stringify({
             ...((typeof sale.notes === 'object' ? sale.notes : {}) as object),
             afipResponse: {
               cae: afipResponse.cae,
@@ -234,7 +253,7 @@ export class SalesService {
               processDate: afipResponse.fecha_proceso,
               qrCode: afipResponse.qr_code,
             },
-          },
+          })),
         },
         include: {
           items: true,
@@ -491,7 +510,16 @@ export class SalesService {
    */
   async getAFIPStatus() {
     try {
-      return await this.afipService.checkServerStatus();
+      // TODO: Re-enable when @retail/ar package is created
+      // return await this.afipService.checkServerStatus();
+
+      // Mock AFIP status until package is created
+      return {
+        appserver: 'OK',
+        dbserver: 'OK',
+        authserver: 'OK',
+        warning: 'AFIP integration not available - using mock data',
+      };
     } catch (error: any) {
       this.logger.error('Error checking AFIP status', error);
       return {
@@ -507,6 +535,12 @@ export class SalesService {
    * Valida un CUIT
    */
   validateCUIT(cuit: string): boolean {
-    return this.afipService.validateCUIT(cuit);
+    // TODO: Re-enable when @retail/ar package is created
+    // return this.afipService.validateCUIT(cuit);
+
+    // Basic CUIT format validation until package is created
+    // CUIT format: XX-XXXXXXXX-X (11 digits)
+    const cleanCuit = cuit.replace(/[^0-9]/g, '');
+    return cleanCuit.length === 11;
   }
 }

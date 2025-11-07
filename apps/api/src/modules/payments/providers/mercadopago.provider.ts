@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { MercadoPagoConfig, Payment, Refund } from 'mercadopago';
+import { MercadoPagoConfig, Payment, PaymentRefund } from 'mercadopago';
 import {
   IPaymentProvider,
   PaymentIntent,
@@ -14,7 +14,7 @@ export class MercadoPagoProvider implements IPaymentProvider {
   private readonly logger = new Logger(MercadoPagoProvider.name);
   private client: MercadoPagoConfig;
   private payment: Payment;
-  private refund: Refund;
+  private refund: PaymentRefund;
 
   constructor(private configService: ConfigService) {
     const accessToken = this.configService.get<string>('MERCADO_PAGO_ACCESS_TOKEN');
@@ -31,7 +31,7 @@ export class MercadoPagoProvider implements IPaymentProvider {
       });
 
       this.payment = new Payment(this.client);
-      this.refund = new Refund(this.client);
+      this.refund = new PaymentRefund(this.client);
     }
   }
 
@@ -115,8 +115,8 @@ export class MercadoPagoProvider implements IPaymentProvider {
       }
 
       const response = await this.refund.create({
+        payment_id: Number(id),
         body: {
-          payment_id: Number(id),
           amount: amountCents ? amountCents / 100 : undefined,
         },
       });

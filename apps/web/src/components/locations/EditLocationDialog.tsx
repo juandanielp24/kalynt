@@ -63,7 +63,7 @@ export function EditLocationDialog({
   // Fetch users for manager dropdown
   const { data: usersData } = useQuery({
     queryKey: ['users'],
-    queryFn: usersApi.getUsers,
+    queryFn: () => usersApi.getUsers(),
     enabled: open,
   });
 

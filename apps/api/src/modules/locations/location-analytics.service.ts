@@ -26,7 +26,7 @@ export class LocationAnalyticsService {
         },
       },
       _sum: {
-        totalAmount: true,
+        totalCents: true,
       },
       _count: true,
     });
@@ -42,9 +42,9 @@ export class LocationAnalyticsService {
       const location = locations.find((l) => l.id === sale.locationId);
       return {
         location,
-        totalSales: sale._sum.totalAmount || 0,
+        totalSales: sale._sum.totalCents || 0,
         salesCount: sale._count,
-        averageSale: sale._count > 0 ? (sale._sum.totalAmount || 0) / sale._count : 0,
+        averageSale: sale._count > 0 ? (sale._sum.totalCents || 0) / sale._count : 0,
       };
     });
 
@@ -107,7 +107,7 @@ export class LocationAnalyticsService {
           status: { not: 'VOIDED' },
           createdAt: { gte: startDate },
         },
-        _sum: { totalAmount: true },
+        _sum: { totalCents: true },
         _count: true,
       }),
       this.prisma.sale.aggregate({
@@ -120,14 +120,14 @@ export class LocationAnalyticsService {
             lt: startDate,
           },
         },
-        _sum: { totalAmount: true },
+        _sum: { totalCents: true },
         _count: true,
       }),
     ]);
 
-    const totalSales = salesData._sum.totalAmount || 0;
+    const totalSales = salesData._sum.totalCents || 0;
     const salesCount = salesData._count;
-    const previousTotalSales = previousSalesData._sum.totalAmount || 0;
+    const previousTotalSales = previousSalesData._sum.totalCents || 0;
     const previousSalesCount = previousSalesData._count;
 
     // Stock metrics
@@ -216,7 +216,7 @@ export class LocationAnalyticsService {
       },
       select: {
         createdAt: true,
-        totalAmount: true,
+        totalCents: true,
       },
       orderBy: { createdAt: 'asc' },
     });
@@ -228,13 +228,18 @@ export class LocationAnalyticsService {
       const date = format(sale.createdAt, 'yyyy-MM-dd');
       const current = salesByDate.get(date) || { total: 0, count: 0 };
       salesByDate.set(date, {
-        total: current.total + sale.totalAmount,
+        total: current.total + sale.totalCents,
         count: current.count + 1,
       });
     });
 
     // Fill missing dates with zero
-    const result = [];
+    const result: Array<{
+      date: string;
+      total: number;
+      count: number;
+      average: number;
+    }> = [];
     for (let i = 0; i < days; i++) {
       const date = format(subDays(new Date(), days - i - 1), 'yyyy-MM-dd');
       const data = salesByDate.get(date) || { total: 0, count: 0 };
@@ -267,12 +272,12 @@ export class LocationAnalyticsService {
       },
       _sum: {
         quantity: true,
-        subtotal: true,
+        subtotalCents: true,
       },
       _count: true,
       orderBy: {
         _sum: {
-          subtotal: 'desc',
+          subtotalCents: 'desc',
         },
       },
       take: limit,
@@ -295,7 +300,7 @@ export class LocationAnalyticsService {
       return {
         product,
         quantitySold: item._sum.quantity || 0,
-        revenue: item._sum.subtotal || 0,
+        revenue: item._sum.subtotalCents || 0,
         salesCount: item._count,
       };
     });

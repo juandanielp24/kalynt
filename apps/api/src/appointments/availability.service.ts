@@ -7,7 +7,7 @@ import * as timezone from 'dayjs/plugin/timezone';
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-interface TimeSlot {
+export interface TimeSlot {
   startTime: Date;
   endTime: Date;
   available: boolean;

@@ -138,7 +138,8 @@ export const salesApi = {
    * GET /sales
    */
   async findAll(query?: QuerySalesDto): Promise<PaginatedSalesResponse> {
-    return apiClient.get<PaginatedSalesResponse>('/sales', { params: query as any });
+    const response = await apiClient.get<PaginatedSalesResponse>('/sales', { params: query as any });
+    return response.data;
   },
 
   /**
@@ -146,7 +147,8 @@ export const salesApi = {
    * GET /sales/:id
    */
   async findOne(id: string): Promise<Sale> {
-    return apiClient.get<Sale>(`/sales/${id}`);
+    const response = await apiClient.get<Sale>(`/sales/${id}`);
+    return response.data;
   },
 
   /**
@@ -154,7 +156,8 @@ export const salesApi = {
    * POST /sales
    */
   async create(dto: CreateSaleDto): Promise<Sale> {
-    return apiClient.post<Sale>('/sales', dto);
+    const response = await apiClient.post<Sale>('/sales', dto);
+    return response.data;
   },
 
   /**
@@ -162,7 +165,8 @@ export const salesApi = {
    * POST /sales/:id/complete
    */
   async complete(id: string, dto?: CompleteSaleDto): Promise<CompleteSaleResponse> {
-    return apiClient.post<CompleteSaleResponse>(`/sales/${id}/complete`, dto);
+    const response = await apiClient.post<CompleteSaleResponse>(`/sales/${id}/complete`, dto);
+    return response.data;
   },
 
   /**
@@ -170,7 +174,8 @@ export const salesApi = {
    * DELETE /sales/:id
    */
   async cancel(id: string): Promise<{ success: boolean; message: string }> {
-    return apiClient.delete(`/sales/${id}`);
+    const response = await apiClient.delete(`/sales/${id}`);
+    return response.data;
   },
 
   /**
@@ -178,6 +183,7 @@ export const salesApi = {
    * GET /sales/afip/status
    */
   async getAFIPStatus(): Promise<AFIPStatusResponse> {
-    return apiClient.get<AFIPStatusResponse>('/sales/afip/status');
+    const response = await apiClient.get<AFIPStatusResponse>('/sales/afip/status');
+    return response.data;
   },
 };

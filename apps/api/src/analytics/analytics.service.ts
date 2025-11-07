@@ -105,11 +105,11 @@ export class AnalyticsService {
     });
 
     const totalSales = sales.length;
-    const totalRevenue = sales.reduce((sum, sale) => sum + sale.totalAmount, 0);
-    const totalDiscount = sales.reduce((sum, sale) => sum + sale.discount, 0);
+    const totalRevenue = sales.reduce((sum, sale) => sum + sale.totalCents, 0);
+    const totalDiscount = sales.reduce((sum, sale) => sum + sale.discountCents, 0);
     const totalCost = sales.reduce((sum, sale) => {
       return sum + sale.items.reduce((itemSum, item) => {
-        return itemSum + (item.product?.cost || 0) * item.quantity;
+        return itemSum + (item.product?.costCents || 0) * item.quantity;
       }, 0);
     }, 0);
 
@@ -151,14 +151,14 @@ export class AnalyticsService {
       },
       select: {
         createdAt: true,
-        totalAmount: true,
-        discount: true,
+        totalCents: true,
+        discountCents: true,
         items: {
           select: {
             quantity: true,
             product: {
               select: {
-                cost: true,
+                costCents: true,
               },
             },
           },
@@ -177,16 +177,16 @@ export class AnalyticsService {
       }
 
       const cost = sale.items.reduce((sum, item) => {
-        return sum + (item.product?.cost || 0) * item.quantity;
+        return sum + (item.product?.costCents || 0) * item.quantity;
       }, 0);
 
-      grouped[date].revenue += sale.totalAmount;
+      grouped[date].revenue += sale.totalCents;
       grouped[date].sales += 1;
-      grouped[date].profit += sale.totalAmount - cost;
+      grouped[date].profit += sale.totalCents - cost;
     });
 
     // Fill missing days
-    const result = [];
+    const result: Array<{ date: string; revenue: number; sales: number; profit: number }> = [];
     let currentDate = dayjs(dateRange.startDate);
     const endDate = dayjs(dateRange.endDate);
 
@@ -257,12 +257,12 @@ export class AnalyticsService {
         };
       }
 
-      const itemCost = (item.product?.cost || 0) * item.quantity;
+      const itemCost = (item.product?.costCents || 0) * item.quantity;
 
       grouped[productId].quantity += item.quantity;
-      grouped[productId].revenue += item.totalPrice;
+      grouped[productId].revenue += item.totalCents;
       grouped[productId].cost += itemCost;
-      grouped[productId].profit += item.totalPrice - itemCost;
+      grouped[productId].profit += item.totalCents - itemCost;
     });
 
     return Object.values(grouped)
@@ -324,7 +324,7 @@ export class AnalyticsService {
       }
 
       grouped[categoryId].quantity += item.quantity;
-      grouped[categoryId].revenue += item.totalPrice;
+      grouped[categoryId].revenue += item.totalCents;
       grouped[categoryId].salesCount += 1;
     });
 
@@ -377,7 +377,7 @@ export class AnalyticsService {
       }
 
       grouped[locationId].salesCount += 1;
-      grouped[locationId].revenue += sale.totalAmount;
+      grouped[locationId].revenue += sale.totalCents;
     });
 
     return Object.values(grouped)
@@ -402,7 +402,7 @@ export class AnalyticsService {
       },
       select: {
         paymentMethod: true,
-        totalAmount: true,
+        totalCents: true,
       },
     });
 
@@ -420,7 +420,7 @@ export class AnalyticsService {
       }
 
       grouped[method].count += 1;
-      grouped[method].revenue += sale.totalAmount;
+      grouped[method].revenue += sale.totalCents;
     });
 
     const result = Object.values(grouped).sort((a, b) => b.revenue - a.revenue);
@@ -457,7 +457,7 @@ export class AnalyticsService {
         },
         select: {
           customerId: true,
-          totalAmount: true,
+          totalCents: true,
         },
       }),
     ]);
@@ -472,7 +472,7 @@ export class AnalyticsService {
     sales.forEach((sale) => {
       if (sale.customerId) {
         customerRevenue[sale.customerId] =
-          (customerRevenue[sale.customerId] || 0) + sale.totalAmount;
+          (customerRevenue[sale.customerId] || 0) + sale.totalCents;
       }
     });
 
@@ -524,11 +524,11 @@ export class AnalyticsService {
     const totalProducts = products;
     const totalStock = stock.reduce((sum, s) => sum + s.quantity, 0);
     const totalStockValue = stock.reduce((sum, s) => {
-      return sum + s.quantity * (s.product?.cost || 0);
+      return sum + s.quantity * (s.product?.costCents || 0);
     }, 0);
 
     const lowStockProducts = stock.filter((s) => {
-      return s.quantity <= (s.product?.minStock || 0);
+      return s.quantity <= (s.minQuantity || 0);
     }).length;
 
     const outOfStockProducts = stock.filter((s) => s.quantity === 0).length;
@@ -547,7 +547,7 @@ export class AnalyticsService {
    * Generate insights
    */
   private async generateInsights(tenantId: string, data: any) {
-    const insights = [];
+    const insights: Array<{ type: string; title: string; description: string; metric: any; icon: string }> = [];
 
     // Sales growth
     const salesGrowth = this.calculateGrowth(

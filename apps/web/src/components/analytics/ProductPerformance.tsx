@@ -89,7 +89,7 @@ export function ProductPerformance({ period, onExport }: Props) {
   }, [data?.products, searchTerm, sortBy]);
 
   if (isLoading) {
-    return <div className="text-center py-12">Cargando análisis de productos...</div>;
+    return <div className="text-center py-12">Cargando anÃ¡lisis de productos...</div>;
   }
 
   if (!data) return null;
@@ -122,7 +122,7 @@ export function ProductPerformance({ period, onExport }: Props) {
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2">
             <Package className="h-6 w-6 text-blue-600" />
-            Análisis de Productos
+            AnÃ¡lisis de Productos
           </h2>
           <p className="text-gray-600">Performance detallado por producto</p>
         </div>
@@ -168,7 +168,7 @@ export function ProductPerformance({ period, onExport }: Props) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{data.summary.totalProducts}</div>
-            <p className="text-xs text-gray-600 mt-1">En el período</p>
+            <p className="text-xs text-gray-600 mt-1">En el perÃ­odo</p>
           </CardContent>
         </Card>
 
@@ -233,9 +233,9 @@ export function ProductPerformance({ period, onExport }: Props) {
             <div className="flex items-start gap-3">
               <Package className="h-5 w-5 text-red-600 mt-0.5" />
               <div>
-                <h4 className="font-semibold text-sm mb-1">Stock Crítico</h4>
+                <h4 className="font-semibold text-sm mb-1">Stock CrÃ­tico</h4>
                 <p className="text-sm text-gray-700">
-                  {criticalStockProducts} productos con stock bajo mínimo
+                  {criticalStockProducts} productos con stock bajo mÃ­nimo
                 </p>
               </div>
             </div>
@@ -261,9 +261,9 @@ export function ProductPerformance({ period, onExport }: Props) {
             <div className="flex items-start gap-3">
               <Clock className="h-5 w-5 text-gray-600 mt-0.5" />
               <div>
-                <h4 className="font-semibold text-sm mb-1">Baja Rotación</h4>
+                <h4 className="font-semibold text-sm mb-1">Baja RotaciÃ³n</h4>
                 <p className="text-sm text-gray-700">
-                  {slowMovers} productos con rotación lenta
+                  {slowMovers} productos con rotaciÃ³n lenta
                 </p>
               </div>
             </div>
@@ -299,7 +299,7 @@ export function ProductPerformance({ period, onExport }: Props) {
         <CardHeader>
           <CardTitle>Matriz de Performance: Margen vs Ingresos</CardTitle>
           <p className="text-sm text-gray-600 mt-2">
-            El tamaño de las burbujas representa la cantidad vendida
+            El tamaÃ±o de las burbujas representa la cantidad vendida
           </p>
         </CardHeader>
         <CardContent>
@@ -380,7 +380,7 @@ export function ProductPerformance({ period, onExport }: Props) {
       {/* Detailed Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Análisis Detallado por Producto (Top 50)</CardTitle>
+          <CardTitle>AnÃ¡lisis Detallado por Producto (Top 50)</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -389,14 +389,14 @@ export function ProductPerformance({ period, onExport }: Props) {
                 <tr className="border-b">
                   <th className="text-left py-3 px-4">Producto</th>
                   <th className="text-left py-3 px-4">SKU</th>
-                  <th className="text-left py-3 px-4">Categoría</th>
+                  <th className="text-left py-3 px-4">CategorÃ­a</th>
                   <th className="text-right py-3 px-4">Cantidad</th>
                   <th className="text-right py-3 px-4">Ingresos</th>
                   <th className="text-right py-3 px-4">Ganancia</th>
                   <th className="text-right py-3 px-4">Margen</th>
                   <th className="text-right py-3 px-4">Stock</th>
-                  <th className="text-right py-3 px-4">Rotación</th>
-                  <th className="text-right py-3 px-4">Días Stock</th>
+                  <th className="text-right py-3 px-4">RotaciÃ³n</th>
+                  <th className="text-right py-3 px-4">DÃ­as Stock</th>
                 </tr>
               </thead>
               <tbody>
@@ -447,7 +447,7 @@ export function ProductPerformance({ period, onExport }: Props) {
                         {product.turnoverRate.toFixed(1)}x
                       </td>
                       <td className="text-right py-3 px-4">
-                        {product.daysOfStock.toFixed(0)} días
+                        {product.daysOfStock.toFixed(0)} dÃ­as
                       </td>
                     </tr>
                   );

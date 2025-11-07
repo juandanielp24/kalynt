@@ -1,9 +1,9 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { Injectable, Inject } from '@nestjs/common';
+import { PrismaClient } from '@retail/database';
 
 @Injectable()
 export class DeliverySettingsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(@Inject('PRISMA') private prisma: PrismaClient) {}
 
   /**
    * Get delivery settings

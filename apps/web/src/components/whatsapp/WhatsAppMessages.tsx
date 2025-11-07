@@ -3,18 +3,18 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { whatsappApi, MessageDirection, MessageStatus, type WhatsAppMessage } from '@/lib/api/whatsapp';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@retail/ui';
+import { Badge } from '@retail/ui';
+import { Button } from '@retail/ui';
+import { Input } from '@retail/ui';
+import { Label } from '@retail/ui';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from '@retail/ui';
 import {
   Table,
   TableBody,
@@ -22,7 +22,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from '@retail/ui';
 import {
   AlertCircle,
   ArrowDownCircle,
@@ -35,7 +35,7 @@ import {
   Search,
   XCircle,
 } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription } from '@retail/ui';
 import { cn } from '@/lib/utils';
 
 const statusIcons: Record<MessageStatus, any> = {

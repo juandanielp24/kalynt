@@ -1,5 +1,5 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
-import { PrismaClient } from '@retail/database';
+import { PrismaClient, WhatsAppTemplateType } from '@retail/database';
 
 @Injectable()
 export class WhatsAppConfigService {
@@ -208,7 +208,9 @@ Estamos para ayudarte. ¿En qué podemos asistirte hoy?`,
           data: {
             tenantId,
             configId: config.id,
-            ...template,
+            name: template.name,
+            type: template.type as WhatsAppTemplateType,
+            content: template.content,
           },
         })
       )

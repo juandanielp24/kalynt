@@ -28,12 +28,12 @@ export class WSAAService {
   async getCredentials(service: string = 'wsfe'): Promise<WSAACredentials> {
     // Verificar si tenemos credenciales válidas
     if (this.credentials && this.isCredentialsValid(this.credentials)) {
-      this.logger.debug(\`Using cached credentials for service: \${service}\`);
+      this.logger.debug(`Using cached credentials for service: ${service}`);
       return this.credentials;
     }
 
     // Generar nuevas credenciales
-    this.logger.log(\`Authenticating with AFIP for service: \${service}\`);
+    this.logger.log(`Authenticating with AFIP for service: ${service}`);
     return this.authenticate(service);
   }
 
@@ -68,12 +68,12 @@ export class WSAAService {
 
       // 4. Parsear y almacenar credenciales
       this.credentials = await this.parseWSAAResponse(response);
-      this.logger.log(\`Authentication successful. Token expires at: \${this.credentials.expirationTime}\`);
+      this.logger.log(`Authentication successful. Token expires at: ${this.credentials.expirationTime}`);
 
       return this.credentials;
     } catch (error: any) {
-      this.logger.error(\`WSAA authentication failed: \${error.message}\`, error.stack);
-      throw new Error(\`AFIP authentication failed: \${error.message}\`);
+      this.logger.error(`WSAA authentication failed: ${error.message}`, error.stack);
+      throw new Error(`AFIP authentication failed: ${error.message}`);
     }
   }
 
@@ -88,15 +88,15 @@ export class WSAAService {
     const generationTime = DateFormatter.toWSAAFormat(now);
     const expiration = DateFormatter.toWSAAFormat(expirationTime);
 
-    return \`<?xml version="1.0" encoding="UTF-8"?>
+    return `<?xml version="1.0" encoding="UTF-8"?>
 <loginTicketRequest version="1.0">
   <header>
-    <uniqueId>\${uniqueId}</uniqueId>
-    <generationTime>\${generationTime}</generationTime>
-    <expirationTime>\${expiration}</expirationTime>
+    <uniqueId>${uniqueId}</uniqueId>
+    <generationTime>${generationTime}</generationTime>
+    <expirationTime>${expiration}</expirationTime>
   </header>
-  <service>\${service}</service>
-</loginTicketRequest>\`;
+  <service>${service}</service>
+</loginTicketRequest>`;
   }
 
   /**
@@ -111,11 +111,11 @@ export class WSAAService {
     }
 
     if (!fs.existsSync(certPath)) {
-      throw new Error(\`Certificate not found: \${certPath}\`);
+      throw new Error(`Certificate not found: ${certPath}`);
     }
 
     if (!fs.existsSync(keyPath)) {
-      throw new Error(\`Private key not found: \${keyPath}\`);
+      throw new Error(`Private key not found: ${keyPath}`);
     }
 
     const cert = fs.readFileSync(certPath, 'utf-8');
@@ -140,19 +140,19 @@ export class WSAAService {
     const environment = this.config.get<string>('AFIP_ENVIRONMENT', 'testing');
     const url = AFIP_URLS[environment as 'testing' | 'production'].wsaa;
 
-    this.logger.debug(\`Calling WSAA at: \${url}\`);
+    this.logger.debug(`Calling WSAA at: ${url}`);
 
-    const soapEnvelope = \`<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope 
-  xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" 
+    const soapEnvelope = `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope
+  xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
   xmlns:wsaa="http://wsaa.view.sua.dvadac.desein.afip.gov">
   <soapenv:Header/>
   <soapenv:Body>
     <wsaa:loginCms>
-      <wsaa:in0>\${cms}</wsaa:in0>
+      <wsaa:in0>${cms}</wsaa:in0>
     </wsaa:loginCms>
   </soapenv:Body>
-</soapenv:Envelope>\`;
+</soapenv:Envelope>`;
 
     try {
       const response = await axios.post(url, soapEnvelope, {
@@ -166,7 +166,7 @@ export class WSAAService {
       return response.data;
     } catch (error: any) {
       if (error.response) {
-        this.logger.error(\`WSAA HTTP error: \${error.response.status} - \${error.response.data}\`);
+        this.logger.error(`WSAA HTTP error: ${error.response.status} - ${error.response.data}`);
       }
       throw error;
     }
@@ -206,9 +206,9 @@ export class WSAAService {
         expirationTime,
       };
     } catch (error: any) {
-      this.logger.error(\`Failed to parse WSAA response: \${error.message}\`);
-      this.logger.debug(\`XML response: \${xml}\`);
-      throw new Error(\`Failed to parse WSAA response: \${error.message}\`);
+      this.logger.error(`Failed to parse WSAA response: ${error.message}`);
+      this.logger.debug(`XML response: ${xml}`);
+      throw new Error(`Failed to parse WSAA response: ${error.message}`);
     }
   }
 

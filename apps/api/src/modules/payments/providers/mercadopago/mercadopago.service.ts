@@ -1,9 +1,9 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import MercadoPago from 'mercadopago';
+import { MercadoPagoConfig, Payment, Preference, PaymentRefund } from 'mercadopago';
 import * as QRCode from 'qrcode';
 import {
-  MercadoPagoConfig,
+  MercadoPagoConfigOptions,
   MercadoPagoPaymentRequest,
   MercadoPagoQRRequest,
   MercadoPagoPaymentInfo,
@@ -13,7 +13,10 @@ import { PaymentStatus } from '../../payments.types';
 @Injectable()
 export class MercadoPagoService {
   private readonly logger = new Logger(MercadoPagoService.name);
-  private client: typeof MercadoPago;
+  private client: MercadoPagoConfig;
+  private payment: Payment;
+  private preference: Preference;
+  private refund: PaymentRefund;
 
   constructor(private configService: ConfigService) {
     this.initializeClient();
@@ -30,11 +33,16 @@ export class MercadoPagoService {
       return;
     }
 
-    MercadoPago.configure({
-      access_token: accessToken,
+    this.client = new MercadoPagoConfig({
+      accessToken,
+      options: {
+        timeout: 5000,
+      },
     });
 
-    this.client = MercadoPago;
+    this.payment = new Payment(this.client);
+    this.preference = new Preference(this.client);
+    this.refund = new PaymentRefund(this.client);
     this.logger.log('Mercado Pago client initialized');
   }
 
@@ -45,13 +53,19 @@ export class MercadoPagoService {
     paymentData: MercadoPagoPaymentRequest
   ): Promise<MercadoPagoPaymentInfo> {
     try {
+      if (!this.payment) {
+        throw new Error('Mercado Pago not configured');
+      }
+
       this.logger.log(`Creating Mercado Pago payment for ${paymentData.payer.email}`);
 
-      const payment = await this.client.payment.create(paymentData);
+      const payment = await this.payment.create({
+        body: paymentData,
+      });
 
-      this.logger.log(`Payment created: ${payment.body.id}, status: ${payment.body.status}`);
+      this.logger.log(`Payment created: ${payment.id}, status: ${payment.status}`);
 
-      return payment.body as MercadoPagoPaymentInfo;
+      return payment as any as MercadoPagoPaymentInfo;
     } catch (error: any) {
       this.logger.error('Error creating Mercado Pago payment', error);
       throw new BadRequestException({
@@ -64,6 +78,8 @@ export class MercadoPagoService {
 
   /**
    * Genera un QR code para pagos presenciales
+   * TODO: Migrate to new Point of Sale API v2
+   * https://www.mercadopago.com/developers/en/docs/qr-code/integration-configuration
    */
   async createQRPayment(
     qrData: MercadoPagoQRRequest
@@ -72,43 +88,12 @@ export class MercadoPagoService {
     qrData: string;
     inStoreOrderId: string;
   }> {
-    try {
-      this.logger.log(`Creating QR payment for reference: ${qrData.external_reference}`);
-
-      // Crear orden en la API de Point of Sale
-      const order = await this.client.instore.create({
-        external_reference: qrData.external_reference,
-        title: qrData.title,
-        description: qrData.description,
-        notification_url: qrData.notification_url,
-        total_amount: qrData.total_amount,
-        items: qrData.items,
-      });
-
-      const inStoreOrderId = order.body.id;
-      const qrData_string = order.body.qr_data;
-
-      // Generar QR code como imagen base64
-      const qrCodeImage = await QRCode.toDataURL(qrData_string, {
-        width: 300,
-        margin: 2,
-        errorCorrectionLevel: 'M',
-      });
-
-      this.logger.log(`QR payment created: ${inStoreOrderId}`);
-
-      return {
-        qrCode: qrCodeImage,
-        qrData: qrData_string,
-        inStoreOrderId,
-      };
-    } catch (error: any) {
-      this.logger.error('Error creating QR payment', error);
-      throw new BadRequestException({
-        message: 'QR payment creation failed',
-        error: error.message,
-      });
-    }
+    // The instore API has been deprecated in MP SDK v2
+    // Need to use Point of Sale API v2 instead
+    throw new BadRequestException({
+      message: 'QR payment creation not implemented for SDK v2',
+      error: 'The instore API has been deprecated. Please use Point of Sale API v2.',
+    });
   }
 
   /**
@@ -125,33 +110,40 @@ export class MercadoPagoService {
     id: string;
   }> {
     try {
+      if (!this.preference) {
+        throw new Error('Mercado Pago not configured');
+      }
+
       this.logger.log(`Creating payment link for reference: ${externalReference}`);
 
-      const preference = await this.client.preferences.create({
-        items: [
-          {
-            title,
-            description,
-            unit_price: amountCents / 100,
-            quantity: 1,
-            currency_id: 'ARS',
+      const preference = await this.preference.create({
+        body: {
+          items: [
+            {
+              id: externalReference,
+              title,
+              description,
+              unit_price: amountCents / 100,
+              quantity: 1,
+              currency_id: 'ARS',
+            },
+          ],
+          external_reference: externalReference,
+          notification_url: notificationUrl,
+          back_urls: {
+            success: `${this.configService.get('APP_URL')}/payment/success`,
+            failure: `${this.configService.get('APP_URL')}/payment/failure`,
+            pending: `${this.configService.get('APP_URL')}/payment/pending`,
           },
-        ],
-        external_reference: externalReference,
-        notification_url: notificationUrl,
-        back_urls: {
-          success: `${this.configService.get('APP_URL')}/payment/success`,
-          failure: `${this.configService.get('APP_URL')}/payment/failure`,
-          pending: `${this.configService.get('APP_URL')}/payment/pending`,
+          auto_return: 'approved' as any,
         },
-        auto_return: 'approved',
       });
 
-      this.logger.log(`Payment link created: ${preference.body.id}`);
+      this.logger.log(`Payment link created: ${preference.id}`);
 
       return {
-        initPoint: preference.body.init_point,
-        id: preference.body.id,
+        initPoint: preference.init_point || '',
+        id: preference.id || '',
       };
     } catch (error: any) {
       this.logger.error('Error creating payment link', error);
@@ -163,12 +155,16 @@ export class MercadoPagoService {
   }
 
   /**
-   * Obtiene información de un pago
+   * Obtiene informaciÃ³n de un pago
    */
   async getPaymentInfo(paymentId: string): Promise<MercadoPagoPaymentInfo> {
     try {
-      const payment = await this.client.payment.get(Number(paymentId));
-      return payment.body as MercadoPagoPaymentInfo;
+      if (!this.payment) {
+        throw new Error('Mercado Pago not configured');
+      }
+
+      const payment = await this.payment.get({ id: Number(paymentId) });
+      return payment as any as MercadoPagoPaymentInfo;
     } catch (error: any) {
       this.logger.error(`Error getting payment info for ${paymentId}`, error);
       throw new BadRequestException({
@@ -183,16 +179,22 @@ export class MercadoPagoService {
    */
   async refundPayment(paymentId: string, amount?: number): Promise<any> {
     try {
+      if (!this.refund) {
+        throw new Error('Mercado Pago not configured');
+      }
+
       this.logger.log(`Refunding payment ${paymentId}${amount ? ` - amount: ${amount}` : ''}`);
 
-      const refund = await this.client.refund.create({
+      const refund = await this.refund.create({
         payment_id: Number(paymentId),
-        amount: amount,
+        body: {
+          amount: amount,
+        },
       });
 
-      this.logger.log(`Refund created: ${refund.body.id}`);
+      this.logger.log(`Refund created: ${refund.id}`);
 
-      return refund.body;
+      return refund;
     } catch (error: any) {
       this.logger.error(`Error refunding payment ${paymentId}`, error);
       throw new BadRequestException({
@@ -203,16 +205,17 @@ export class MercadoPagoService {
   }
 
   /**
-   * Obtiene los métodos de pago disponibles
+   * Obtiene los mÃ©todos de pago disponibles
+   * TODO: Update to use PaymentMethod class in SDK v2
+   * https://www.mercadopago.com/developers/en/reference/payment_methods/_payment_methods/get
    */
   async getPaymentMethods(): Promise<any[]> {
-    try {
-      const methods = await this.client.payment_methods.listAll();
-      return methods.body;
-    } catch (error: any) {
-      this.logger.error('Error getting payment methods', error);
-      throw error;
-    }
+    // The payment_methods API has changed in v2
+    // Need to use PaymentMethod class instead
+    throw new BadRequestException({
+      message: 'Get payment methods not implemented for SDK v2',
+      error: 'The payment_methods API has changed. Please use PaymentMethod class.',
+    });
   }
 
   /**
@@ -247,10 +250,10 @@ export class MercadoPagoService {
         return true;
       }
 
-      // Implementar verificación según documentación de MP
+      // Implementar verificaciï¿½n segï¿½n documentaciï¿½n de MP
       // https://www.mercadopago.com.ar/developers/es/docs/your-integrations/notifications/webhooks
 
-      // TODO: Implementar verificación real de firma
+      // TODO: Implementar verificaciï¿½n real de firma
       // const crypto = require('crypto');
       // const parts = xSignature.split(',');
       // ...

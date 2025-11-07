@@ -14,7 +14,7 @@ import {
   TabsList,
   TabsTrigger,
 } from '@retail/ui';
-import { locationsApi, TransferStatus } from '@/lib/api/locations';
+import { locationsApi, TransferStatus, Location, StockTransfer } from '@/lib/api/locations';
 import { LocationsList } from '@/components/locations/LocationsList';
 import { LocationForm } from '@/components/locations/LocationForm';
 import { StockTransfersList } from '@/components/locations/StockTransfersList';
@@ -40,13 +40,13 @@ export default function LocationsPage() {
   });
 
   // Calculate stats
-  const activeLocations = locations.filter((loc) => loc.isActive).length;
+  const activeLocations = locations.filter((loc: Location) => loc.isActive).length;
 
   const { data: totalInventoryValue = 0 } = useQuery({
     queryKey: ['inventory-valuation-total'],
     queryFn: async () => {
       const values = await Promise.all(
-        locations.map(async (loc) => {
+        locations.map(async (loc: Location) => {
           try {
             const valuation = await locationsApi.getInventoryValuation(loc.id);
             return valuation?.totalValue || 0;
@@ -60,9 +60,9 @@ export default function LocationsPage() {
     enabled: locations.length > 0,
   });
 
-  const totalSKUs = locations.reduce((sum, loc) => sum + (loc._count?.inventory || 0), 0);
+  const totalSKUs = locations.reduce((sum: number, loc: Location) => sum + (loc._count?.inventory || 0), 0);
   const pendingTransfers = transfers.filter(
-    (t) => t.status === TransferStatus.PENDING
+    (t: StockTransfer) => t.status === TransferStatus.PENDING
   ).length;
 
   const handleEditLocation = (id: string) => {

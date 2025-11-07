@@ -161,7 +161,7 @@ export function AppointmentForm({ appointment, onClose, defaultDate, defaultServ
 
     const data = {
       serviceId: selectedService,
-      startTime: new Date(selectedSlot),
+      startTime: new Date(selectedSlot).toISOString(),
       customerId: customerType === 'existing' ? formData.customerId : undefined,
       customerName: customerType === 'new' ? formData.customerName : undefined,
       customerEmail: customerType === 'new' ? formData.customerEmail : undefined,

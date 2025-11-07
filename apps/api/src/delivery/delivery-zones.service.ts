@@ -1,10 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
+import { PrismaClient } from '@retail/database';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class DeliveryZonesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(@Inject('PRISMA') private prisma: PrismaClient) {}
 
   /**
    * Get all delivery zones for a tenant

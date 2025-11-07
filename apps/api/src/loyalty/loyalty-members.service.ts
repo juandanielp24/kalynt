@@ -25,6 +25,11 @@ export class LoyaltyMembersService {
           customerId,
         },
       },
+      include: {
+        program: true,
+        tier: true,
+        customer: true,
+      },
     });
 
     if (existing) {
@@ -79,7 +84,8 @@ export class LoyaltyMembersService {
 
     this.logger.log(`Customer ${customerId} enrolled in program ${programId}`);
 
-    return member;
+    // Return member with relations
+    return this.getMember(member.id);
   }
 
   /**
@@ -285,8 +291,12 @@ export class LoyaltyMembersService {
     balance?: number;
     expiresAt?: Date;
   }) {
+    const { balance, ...rest } = data;
     const transaction = await this.prisma.pointsTransaction.create({
-      data,
+      data: {
+        ...rest,
+        balance: balance ?? data.points, // Use balance if provided, otherwise use points
+      },
     });
 
     return transaction;

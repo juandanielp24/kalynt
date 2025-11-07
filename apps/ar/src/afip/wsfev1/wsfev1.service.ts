@@ -34,9 +34,9 @@ export class WSFEv1Service {
     const credentials = await this.wsaaService.getCredentials('wsfe');
     const cuit = this.config.get<string>('AFIP_CUIT');
 
-    const soapBody = \`
+    const soapBody = `
     <FEDummy xmlns="http://ar.gov.afip.dif.FEV1/">
-    </FEDummy>\`;
+    </FEDummy>`;
 
     try {
       const response = await this.callWS('FEDummy', soapBody);
@@ -50,7 +50,7 @@ export class WSFEv1Service {
         authServer: result?.AuthServer === 'OK' ? 'OK' : 'ERROR',
       };
     } catch (error: any) {
-      this.logger.error(\`Failed to get server status: \${error.message}\`);
+      this.logger.error(`Failed to get server status: ${error.message}`);
       return {
         appServer: 'ERROR',
         dbServer: 'ERROR',
@@ -69,16 +69,16 @@ export class WSFEv1Service {
     const credentials = await this.wsaaService.getCredentials('wsfe');
     const cuit = this.config.get<string>('AFIP_CUIT');
 
-    const soapBody = \`
+    const soapBody = `
     <FECompUltimoAutorizado xmlns="http://ar.gov.afip.dif.FEV1/">
       <Auth>
-        <Token>\${credentials.token}</Token>
-        <Sign>\${credentials.sign}</Sign>
-        <Cuit>\${cuit}</Cuit>
+        <Token>${credentials.token}</Token>
+        <Sign>${credentials.sign}</Sign>
+        <Cuit>${cuit}</Cuit>
       </Auth>
-      <PtoVta>\${salePoint}</PtoVta>
-      <CbteTipo>\${invoiceType}</CbteTipo>
-    </FECompUltimoAutorizado>\`;
+      <PtoVta>${salePoint}</PtoVta>
+      <CbteTipo>${invoiceType}</CbteTipo>
+    </FECompUltimoAutorizado>`;
 
     try {
       const response = await this.callWS('FECompUltimoAutorizado', soapBody);
@@ -87,12 +87,12 @@ export class WSFEv1Service {
       const result = parsed.FECompUltimoAutorizadoResponse?.FECompUltimoAutorizadoResult;
       const lastNumber = parseInt(result?.CbteNro || '0');
 
-      this.logger.debug(\`Last invoice number for type \${invoiceType}, point \${salePoint}: \${lastNumber}\`);
+      this.logger.debug(`Last invoice number for type ${invoiceType}, point ${salePoint}: ${lastNumber}`);
 
       return lastNumber;
     } catch (error: any) {
-      this.logger.error(\`Failed to get last invoice number: \${error.message}\`);
-      throw new Error(\`Failed to get last invoice number: \${error.message}\`);
+      this.logger.error(`Failed to get last invoice number: ${error.message}`);
+      throw new Error(`Failed to get last invoice number: ${error.message}`);
     }
   }
 
@@ -103,7 +103,7 @@ export class WSFEv1Service {
     const credentials = await this.wsaaService.getCredentials('wsfe');
     const cuit = this.config.get<string>('AFIP_CUIT');
 
-    this.logger.log(\`Generating invoice: Type \${invoice.invoiceType}, Point \${invoice.salePoint}, Number \${invoice.invoiceNumber}\`);
+    this.logger.log(`Generating invoice: Type ${invoice.invoiceType}, Point ${invoice.salePoint}, Number ${invoice.invoiceNumber}`);
 
     // Construir el request SOAP
     const soapBody = this.buildInvoiceRequest(credentials, cuit, invoice);
@@ -113,15 +113,15 @@ export class WSFEv1Service {
       const invoiceResponse = await this.parseInvoiceResponse(response);
 
       if (invoiceResponse.result === 'A') {
-        this.logger.log(\`Invoice authorized: CAE \${invoiceResponse.cae}\`);
+        this.logger.log(`Invoice authorized: CAE ${invoiceResponse.cae}`);
       } else {
-        this.logger.warn(\`Invoice rejected or partial: \${JSON.stringify(invoiceResponse.errors)}\`);
+        this.logger.warn(`Invoice rejected or partial: ${JSON.stringify(invoiceResponse.errors)}`);
       }
 
       return invoiceResponse;
     } catch (error: any) {
-      this.logger.error(\`Failed to generate invoice: \${error.message}\`);
-      throw new Error(\`Failed to generate invoice: \${error.message}\`);
+      this.logger.error(`Failed to generate invoice: ${error.message}`);
+      throw new Error(`Failed to generate invoice: ${error.message}`);
     }
   }
 
@@ -132,19 +132,19 @@ export class WSFEv1Service {
     const credentials = await this.wsaaService.getCredentials('wsfe');
     const cuit = this.config.get<string>('AFIP_CUIT');
 
-    const soapBody = \`
+    const soapBody = `
     <FECompConsultar xmlns="http://ar.gov.afip.dif.FEV1/">
       <Auth>
-        <Token>\${credentials.token}</Token>
-        <Sign>\${credentials.sign}</Sign>
-        <Cuit>\${cuit}</Cuit>
+        <Token>${credentials.token}</Token>
+        <Sign>${credentials.sign}</Sign>
+        <Cuit>${cuit}</Cuit>
       </Auth>
       <FeCompConsReq>
-        <CbteTipo>\${query.invoiceType}</CbteTipo>
-        <PtoVta>\${query.salePoint}</PtoVta>
-        <CbteNro>\${query.invoiceNumber}</CbteNro>
+        <CbteTipo>${query.invoiceType}</CbteTipo>
+        <PtoVta>${query.salePoint}</PtoVta>
+        <CbteNro>${query.invoiceNumber}</CbteNro>
       </FeCompConsReq>
-    </FECompConsultar>\`;
+    </FECompConsultar>`;
 
     try {
       const response = await this.callWS('FECompConsultar', soapBody);
@@ -169,7 +169,7 @@ export class WSFEv1Service {
         processedDate: invoice.FchProceso,
       };
     } catch (error: any) {
-      this.logger.error(\`Failed to query invoice: \${error.message}\`);
+      this.logger.error(`Failed to query invoice: ${error.message}`);
       return null;
     }
   }
@@ -185,95 +185,95 @@ export class WSFEv1Service {
     // Construir IVAs
     let ivaXml = '';
     if (invoice.iva && invoice.iva.length > 0) {
-      const ivaItems = invoice.iva.map(iva => \`
+      const ivaItems = invoice.iva.map(iva => `
         <AlicIva>
-          <Id>\${iva.id}</Id>
-          <BaseImp>\${iva.baseAmount.toFixed(2)}</BaseImp>
-          <Importe>\${iva.taxAmount.toFixed(2)}</Importe>
+          <Id>${iva.id}</Id>
+          <BaseImp>${iva.baseAmount.toFixed(2)}</BaseImp>
+          <Importe>${iva.taxAmount.toFixed(2)}</Importe>
         </AlicIva>
-      \`).join('');
+      `).join('');
 
-      ivaXml = \`<Iva>\${ivaItems}</Iva>\`;
+      ivaXml = `<Iva>${ivaItems}</Iva>`;
     }
 
     // Construir tributos opcionales
     let tributesXml = '';
     if (invoice.tributes && invoice.tributes.length > 0) {
-      const tributeItems = invoice.tributes.map(trib => \`
+      const tributeItems = invoice.tributes.map(trib => `
         <Tributo>
-          <Id>\${trib.id}</Id>
-          <Desc>\${trib.description}</Desc>
-          <BaseImp>\${trib.baseAmount.toFixed(2)}</BaseImp>
-          <Alic>\${trib.rate.toFixed(2)}</Alic>
-          <Importe>\${trib.taxAmount.toFixed(2)}</Importe>
+          <Id>${trib.id}</Id>
+          <Desc>${trib.description}</Desc>
+          <BaseImp>${trib.baseAmount.toFixed(2)}</BaseImp>
+          <Alic>${trib.rate.toFixed(2)}</Alic>
+          <Importe>${trib.taxAmount.toFixed(2)}</Importe>
         </Tributo>
-      \`).join('');
+      `).join('');
 
-      tributesXml = \`<Tributos>\${tributeItems}</Tributos>\`;
+      tributesXml = `<Tributos>${tributeItems}</Tributos>`;
     }
 
     // Construir comprobantes asociados
     let associatedXml = '';
     if (invoice.associatedInvoices && invoice.associatedInvoices.length > 0) {
-      const assocItems = invoice.associatedInvoices.map(assoc => \`
+      const assocItems = invoice.associatedInvoices.map(assoc => `
         <CbteAsoc>
-          <Tipo>\${assoc.type}</Tipo>
-          <PtoVta>\${assoc.salePoint}</PtoVta>
-          <Nro>\${assoc.number}</Nro>
-          <Cuit>\${assoc.cuit}</Cuit>
+          <Tipo>${assoc.type}</Tipo>
+          <PtoVta>${assoc.salePoint}</PtoVta>
+          <Nro>${assoc.number}</Nro>
+          <Cuit>${assoc.cuit}</Cuit>
         </CbteAsoc>
-      \`).join('');
+      `).join('');
 
-      associatedXml = \`<CbtesAsoc>\${assocItems}</CbtesAsoc>\`;
+      associatedXml = `<CbtesAsoc>${assocItems}</CbtesAsoc>`;
     }
 
     // Fechas de servicio (solo si es concepto 2 o 3)
     let serviceXml = '';
     if (invoice.concept !== 1 && invoice.serviceFrom && invoice.serviceTo && invoice.serviceDueDate) {
-      serviceXml = \`
-        <FchServDesde>\${invoice.serviceFrom}</FchServDesde>
-        <FchServHasta>\${invoice.serviceTo}</FchServHasta>
-        <FchVtoPago>\${invoice.serviceDueDate}</FchVtoPago>
-      \`;
+      serviceXml = `
+        <FchServDesde>${invoice.serviceFrom}</FchServDesde>
+        <FchServHasta>${invoice.serviceTo}</FchServHasta>
+        <FchVtoPago>${invoice.serviceDueDate}</FchVtoPago>
+      `;
     }
 
-    return \`
+    return `
     <FECAESolicitar xmlns="http://ar.gov.afip.dif.FEV1/">
       <Auth>
-        <Token>\${credentials.token}</Token>
-        <Sign>\${credentials.sign}</Sign>
-        <Cuit>\${cuit}</Cuit>
+        <Token>${credentials.token}</Token>
+        <Sign>${credentials.sign}</Sign>
+        <Cuit>${cuit}</Cuit>
       </Auth>
       <FeCAEReq>
         <FeCabReq>
           <CantReg>1</CantReg>
-          <PtoVta>\${invoice.salePoint}</PtoVta>
-          <CbteTipo>\${invoice.invoiceType}</CbteTipo>
+          <PtoVta>${invoice.salePoint}</PtoVta>
+          <CbteTipo>${invoice.invoiceType}</CbteTipo>
         </FeCabReq>
         <FeDetReq>
           <FECAEDetRequest>
-            <Concepto>\${invoice.concept}</Concepto>
-            <DocTipo>\${invoice.docType}</DocTipo>
-            <DocNro>\${invoice.docNum}</DocNro>
-            <CbteDesde>\${invoice.invoiceNumber}</CbteDesde>
-            <CbteHasta>\${invoice.invoiceNumber}</CbteHasta>
-            <CbteFch>\${invoice.invoiceDate}</CbteFch>
-            <ImpTotal>\${invoice.totalAmount.toFixed(2)}</ImpTotal>
-            <ImpTotConc>\${invoice.untaxedAmount.toFixed(2)}</ImpTotConc>
-            <ImpNeto>\${invoice.netAmount.toFixed(2)}</ImpNeto>
-            <ImpOpEx>\${invoice.exemptAmount.toFixed(2)}</ImpOpEx>
-            <ImpIVA>\${invoice.taxAmount.toFixed(2)}</ImpIVA>
+            <Concepto>${invoice.concept}</Concepto>
+            <DocTipo>${invoice.docType}</DocTipo>
+            <DocNro>${invoice.docNum}</DocNro>
+            <CbteDesde>${invoice.invoiceNumber}</CbteDesde>
+            <CbteHasta>${invoice.invoiceNumber}</CbteHasta>
+            <CbteFch>${invoice.invoiceDate}</CbteFch>
+            <ImpTotal>${invoice.totalAmount.toFixed(2)}</ImpTotal>
+            <ImpTotConc>${invoice.untaxedAmount.toFixed(2)}</ImpTotConc>
+            <ImpNeto>${invoice.netAmount.toFixed(2)}</ImpNeto>
+            <ImpOpEx>${invoice.exemptAmount.toFixed(2)}</ImpOpEx>
+            <ImpIVA>${invoice.taxAmount.toFixed(2)}</ImpIVA>
             <ImpTrib>0.00</ImpTrib>
-            <MonId>\${invoice.currency}</MonId>
-            <MonCotiz>\${invoice.exchangeRate.toFixed(2)}</MonCotiz>
-            \${serviceXml}
-            \${ivaXml}
-            \${tributesXml}
-            \${associatedXml}
+            <MonId>${invoice.currency}</MonId>
+            <MonCotiz>${invoice.exchangeRate.toFixed(2)}</MonCotiz>
+            ${serviceXml}
+            ${ivaXml}
+            ${tributesXml}
+            ${associatedXml}
           </FECAEDetRequest>
         </FeDetReq>
       </FeCAEReq>
-    </FECAESolicitar>\`;
+    </FECAESolicitar>`;
   }
 
   /**
@@ -283,15 +283,15 @@ export class WSFEv1Service {
     const environment = this.config.get<string>('AFIP_ENVIRONMENT', 'testing');
     const url = AFIP_URLS[environment as 'testing' | 'production'].wsfev1;
 
-    const soapEnvelope = \`<?xml version="1.0" encoding="utf-8"?>
+    const soapEnvelope = `<?xml version="1.0" encoding="utf-8"?>
 <soap:Envelope 
   xmlns:soap="http://www.w3.org/2003/05/soap-envelope" 
   xmlns:ar="http://ar.gov.afip.dif.FEV1/">
   <soap:Header/>
   <soap:Body>
-    \${body}
+    ${body}
   </soap:Body>
-</soap:Envelope>\`;
+</soap:Envelope>`;
 
     try {
       const response = await axios.post(url, soapEnvelope, {
@@ -305,8 +305,8 @@ export class WSFEv1Service {
       return response.data;
     } catch (error: any) {
       if (error.response) {
-        this.logger.error(\`WSFEv1 HTTP error: \${error.response.status}\`);
-        this.logger.debug(\`Response data: \${error.response.data}\`);
+        this.logger.error(`WSFEv1 HTTP error: ${error.response.status}`);
+        this.logger.debug(`Response data: ${error.response.data}`);
       }
       throw error;
     }

@@ -26,6 +26,7 @@ enum PermissionResource {
   CATEGORIES
   STOCK
   STOCK_MOVEMENTS
+  INVENTORY
   SALES
   INVOICES
   CUSTOMERS
@@ -97,6 +98,7 @@ model Tenant {
   // Settings
   timezone String @default("America/Argentina/Buenos_Aires")
   currency String @default("ARS")
+  settings Json?  @default("{}") // Additional tenant settings
 
   // Subscription
   plan   String @default("basic") // basic, pro, enterprise
@@ -140,6 +142,10 @@ model Tenant {
   locationInventory      LocationInventory[]
   stockRequests          StockRequest[]
   locationPriceOverrides LocationPriceOverride[]
+  stockMovements         StockMovement[]
+  stockTransfers         StockTransfer[]
+  stock                  Stock[]
+  payments               Payment[]
 
   @@map("tenants")
 }
@@ -148,10 +154,12 @@ model User {
   id       String @id @default(uuid()) @db.Uuid
   tenantId String @map("tenant_id") @db.Uuid
 
-  email  String
-  name   String
-  role   String // Deprecated: owner, admin, cashier, viewer - kept for backward compatibility
-  roleId String? @map("role_id") @db.Uuid // New RBAC role
+  email    String
+  name     String
+  password String? // Hashed password (optional for social auth users)
+  role     String // Deprecated: owner, admin, cashier, viewer - kept for backward compatibility
+  roleId   String? @map("role_id") @db.Uuid // New RBAC role
+  isActive Boolean @default(true) @map("is_active")
 
   // Auth (better-auth integrará aquí)
   emailVerified Boolean @default(false) @map("email_verified")
@@ -163,6 +171,8 @@ model User {
   // Relations
   tenant                  Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   rbacRole                Role?                       @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  accounts                Account[]
+  sessions                Session[]
   sales                   Sale[]
   auditLogs               AuditLog[]
   notifications           Notification[]
@@ -182,6 +192,67 @@ model User {
   @@index([roleId])
   @@map("users")
 }
+
+// ========================================
+// AUTH: Better-auth models
+// ========================================
+
+model Account {
+  id                String  @id @default(uuid()) @db.Uuid
+  userId            String  @map("user_id") @db.Uuid
+  providerId        String  @map("provider_id") // "credential", "google", "github", etc.
+  providerAccountId String  @map("provider_account_id")
+  password          String? // Hashed password for credential provider
+  accessToken       String? @map("access_token") @db.Text
+  refreshToken      String? @map("refresh_token") @db.Text
+  expiresAt         Int?    @map("expires_at")
+  tokenType         String? @map("token_type")
+  scope             String?
+  idToken           String? @map("id_token") @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent") @db.Text
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("sessions")
+}
+
+model Verification {
+  id         String   @id @default(uuid()) @db.Uuid
+  identifier String // email or phone
+  token      String   @unique
+  expiresAt  DateTime @map("expires_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([identifier])
+  @@index([token])
+  @@map("verifications")
+}
+
 
 // ========================================
 // RBAC: Roles & Permissions
@@ -430,6 +501,7 @@ model Stock {
   // Relations
   product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  Tenant   Tenant   @relation(fields: [tenantId], references: [id])
 
   @@unique([productId, locationId])
   @@index([tenantId, locationId])
@@ -486,6 +558,7 @@ model StockMovement {
   product  Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
   location Location       @relation(fields: [locationId], references: [id], onDelete: Cascade)
   transfer StockTransfer? @relation(fields: [transferId], references: [id], onDelete: SetNull)
+  Tenant   Tenant         @relation(fields: [tenantId], references: [id])
 
   @@index([tenantId, productId])
   @@index([tenantId, locationId])
@@ -546,6 +619,7 @@ model StockTransfer {
   receivedBy     User?               @relation("TransferReceiver", fields: [receivedById], references: [id])
   items          StockTransferItem[]
   stockMovements StockMovement[]
+  Tenant         Tenant              @relation(fields: [tenantId], references: [id])
 
   @@unique([tenantId, transferNumber])
   @@index([tenantId, status])
@@ -653,6 +727,7 @@ model Sale {
   delivery           Delivery?
   promotionUsage     PromotionUsage[]
   pointsTransactions PointsTransaction[]
+  payments           Payment[]
 
   @@unique([tenantId, saleNumber])
   @@index([tenantId, saleDate])
@@ -690,6 +765,59 @@ model SaleItem {
   @@index([saleId])
   @@map("sale_items")
 }
+
+// ========================================
+// PAYMENTS
+// ========================================
+
+enum PaymentMethod {
+  CASH
+  CREDIT_CARD
+  DEBIT_CARD
+  MERCADO_PAGO
+  QR_CODE
+}
+
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  IN_PROCESS
+  REFUNDED
+}
+
+model Payment {
+  id String @id @default(uuid()) @db.Uuid
+  tenantId String @map("tenant_id") @db.Uuid
+  saleId String @map("sale_id") @db.Uuid
+  
+  method PaymentMethod
+  amountCents Int @map("amount_cents")
+  status PaymentStatus @default(PENDING)
+  
+  externalId String? @map("external_id")
+  externalData Json? @map("external_data")
+  qrCode String? @map("qr_code")
+  error String?
+  
+  approvedAt DateTime? @map("approved_at")
+  refundedAt DateTime? @map("refunded_at")
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  sale Sale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  
+  @@index([tenantId])
+  @@index([saleId])
+  @@index([status])
+  @@index([externalId])
+  @@map("payments")
+}
+
 
 // ========================================
 // AUDIT LOG (para compliance)
@@ -1680,6 +1808,7 @@ model LoyaltyProgram {
   rewards      LoyaltyReward[]
   members      LoyaltyMember[]
   transactions PointsTransaction[]
+  redemptions  RewardRedemption[]
 
   @@index([tenantId, isActive])
   @@map("loyalty_programs")
@@ -1734,7 +1863,7 @@ model LoyaltyReward {
 
   // Reward Info
   name        String
-  description String  @db.Text
+  description String? @db.Text
   imageUrl    String? @map("image_url")
 
   // Cost
@@ -1879,9 +2008,10 @@ enum PointsTransactionType {
 // ============================================
 
 model RewardRedemption {
-  id       String @id @default(cuid())
-  memberId String @map("member_id")
-  rewardId String @map("reward_id")
+  id        String @id @default(cuid())
+  memberId  String @map("member_id")
+  rewardId  String @map("reward_id")
+  programId String @map("program_id")
 
   // Points
   pointsSpent Int @map("points_spent")
@@ -1890,10 +2020,11 @@ model RewardRedemption {
   status RedemptionStatus @default(PENDING)
 
   // Validity
-  redeemedAt DateTime  @default(now()) @map("redeemed_at")
-  expiresAt  DateTime? @map("expires_at")
-  usedAt     DateTime? @map("used_at")
-  usedInSale String?   @map("used_in_sale") // Sale ID where used
+  redeemedAt  DateTime  @default(now()) @map("redeemed_at")
+  expiresAt   DateTime? @map("expires_at")
+  usedAt      DateTime? @map("used_at")
+  usedInSale  String?   @map("used_in_sale") // Sale ID where used
+  cancelledAt DateTime? @map("cancelled_at")
 
   // Code (for voucher-type rewards)
   code String? @unique
@@ -1904,9 +2035,11 @@ model RewardRedemption {
   // Relations
   member       LoyaltyMember       @relation(fields: [memberId], references: [id], onDelete: Cascade)
   reward       LoyaltyReward       @relation(fields: [rewardId], references: [id])
+  program      LoyaltyProgram      @relation(fields: [programId], references: [id], onDelete: Cascade)
   transactions PointsTransaction[]
 
   @@index([memberId, status])
+  @@index([programId])
   @@index([code])
   @@map("reward_redemptions")
 }

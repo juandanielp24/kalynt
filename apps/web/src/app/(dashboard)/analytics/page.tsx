@@ -199,7 +199,7 @@ export default function AnalyticsPage() {
           {/* Insights */}
           {!isLoading && dashboard && dashboard.insights.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {dashboard.insights.slice(0, 4).map((insight, index) => (
+              {dashboard.insights.slice(0, 4).map((insight: any, index: number) => (
                 <Card
                   key={index}
                   className={`border-l-4 ${

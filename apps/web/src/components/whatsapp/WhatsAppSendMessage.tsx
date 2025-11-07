@@ -3,14 +3,14 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { whatsappApi } from '@/lib/api/whatsapp';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
+import { Button } from '@retail/ui';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@retail/ui';
+import { Input } from '@retail/ui';
+import { Label } from '@retail/ui';
+import { Textarea } from '@retail/ui';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@retail/ui';
+import { Alert, AlertDescription } from '@retail/ui';
+import { Badge } from '@retail/ui';
 import {
   AlertCircle,
   CheckCircle2,

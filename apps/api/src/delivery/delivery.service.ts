@@ -1,12 +1,12 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaClient } from '@retail/database';
 import { Prisma, DeliveryStatus, DriverStatus } from '@prisma/client';
 
 @Injectable()
 export class DeliveryService {
   constructor(
-    private prisma: PrismaService,
+    @Inject('PRISMA') private prisma: PrismaClient,
     private eventEmitter: EventEmitter2,
   ) {}
 

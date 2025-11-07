@@ -25,7 +25,7 @@ export class HealthController {
       () => this.db.isHealthy('database'),
       () => this.redis.isHealthy('redis'),
       () => this.checkDiskSpace(),
-      () => this.checkMemory(),
+      () => this.memory.checkHeap('memory', 150 * 1024 * 1024), // 150 MB
     ]);
   }
 
@@ -48,19 +48,5 @@ export class HealthController {
       path: '/',
       thresholdPercent: 0.9,
     });
-  }
-
-  private async checkMemory() {
-    const usage = process.memoryUsage();
-    const threshold = 0.9; // 90%
-    const heapUsed = usage.heapUsed / usage.heapTotal;
-
-    return {
-      memory: {
-        status: heapUsed < threshold ? 'up' : 'down',
-        heapUsed: Math.round(heapUsed * 100),
-        details: usage,
-      },
-    };
   }
 }
